@@ -24,7 +24,7 @@ namespace ams::boot {
 
 /* Include splash screen into anonymous namespace. */
 /* TODO: Compile-time switch for splash_screen_text.hpp? */
-#include "boot_splash_screen_notext.inc"
+#include "boot_splash_screen_neutos_logo.inc"
 
     }
 

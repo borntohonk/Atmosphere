@@ -235,18 +235,18 @@ namespace ams::fatal::srv {
             font::AddSpacingLines(0.5f);
 
             /* TODO: Remove Mesosphere identifier in 1.0.0. */
-            font::PrintFormatLine("Firmware: %s (Atmosphère%s %u.%u.%u-%s)", config.GetFirmwareVersion().display_version, svc::IsKernelMesosphere() ? " M" : "", ATMOSPHERE_RELEASE_VERSION, ams::GetGitRevision());
+            font::PrintFormatLine("Firmware: %s (NeutOS %u.%u.%u-%s)", config.GetFirmwareVersion().display_version, svc::IsKernelMesosphere() ? " M" : "", ATMOSPHERE_RELEASE_VERSION, ams::GetGitRevision());
             font::AddSpacingLines(1.5f);
             if (!exosphere::ResultVersionMismatch::Includes(this->context->result)) {
                 font::Print(config.GetErrorDescription());
             } else {
                 /* Print a special message for atmosphere version mismatch. */
-                font::Print("Atmosphère version mismatch detected.\n\n"
+                font::Print("NeutOS version mismatch detected.\n\n"
                                    "Please press the POWER Button to restart the console normally, or a VOL button\n"
                                    "to reboot to a payload (or RCM, if none is present). If you are unable to\n"
                                    "restart the console, hold the POWER Button for 12 seconds to turn the console off.\n\n"
-                                   "Please ensure that all Atmosphère components are updated.\n"
-                                   "github.com/Atmosphere-NX/Atmosphere/releases\n");
+                                   "Please ensure that all NeutOS components are updated.\n"
+                                   "github.com/borntohonk/NeutOS/releases/latest\n");
             }
 
             /* Add a line. */

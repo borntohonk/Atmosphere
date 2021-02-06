@@ -13,7 +13,7 @@ AMS		:= $(TOPDIR)/../../
 include $(DEVKITARM)/base_rules
 
 AMSBRANCH := $(shell git symbolic-ref --short HEAD)
-AMSHASH := $(shell git rev-parse --short HEAD)
+AMSHASH := FFFFFFFF
 AMSREV := $(AMSBRANCH)-$(AMSHASH)
 
 ifneq (, $(strip $(shell git status --porcelain 2>/dev/null)))
