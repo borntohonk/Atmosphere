@@ -258,19 +258,7 @@ static int stratosphere_ini_handler(void *user, const char *section, const char 
 
 static int system_settings_ini_handler(void *user, const char *section, const char *name, const char *value) {
     uint32_t *flags = (uint32_t *)user;
-    if (strcmp(section, "usb") == 0) {
-        if (strcmp(name, "usb30_force_enabled") == 0) {
-            if (strcmp(value, "u8!0x1") == 0) {
-                *flags |= EXOSPHERE_FLAG_FORCE_ENABLE_USB_30;
-            } else if (strcmp(value, "u8!0x0") == 0) {
-                *flags &= ~(EXOSPHERE_FLAG_FORCE_ENABLE_USB_30);
-            }
-        } else {
-            return 0;
-        }
-    } else {
-        return 0;
-    }
+    *flags &= ~(EXOSPHERE_FLAG_FORCE_ENABLE_USB_30);
     return 1;
 }
 
