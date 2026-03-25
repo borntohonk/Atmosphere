@@ -23,7 +23,7 @@ namespace ams::ldr {
         bool g_development_for_acid_production_check = false;
         bool g_development_for_anti_downgrade_check  = false;
         bool g_development_for_acid_signature_check  = false;
-        bool g_enabled_program_verification          = true;
+        bool g_enabled_program_verification          = false;
 
     }
 

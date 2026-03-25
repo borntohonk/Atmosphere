@@ -83,6 +83,8 @@
 #include "offsets/2100_exfat.h"
 #include "offsets/2120.h"
 #include "offsets/2120_exfat.h"
+#include "offsets/fs_no_nca_sig_chk.h"
+#include "offsets/fs_no_cnt_chk.h"
 #include "../utils/fatal.h"
 
 #define GET_OFFSET_STRUCT_NAME(vers) g_offsets##vers
@@ -107,6 +109,8 @@ static const fs_offsets_t GET_OFFSET_STRUCT_NAME(vers) = { \
     .sdmmc_accessor_controller_close = FS_OFFSET##vers##_SDMMC_WRAPPER_CONTROLLER_CLOSE, \
     .sd_das_init                     = FS_OFFSET##vers##_SD_DAS_INIT, \
     .nintendo_paths                  = FS_OFFSET##vers##_NINTENDO_PATHS, \
+    .no_nca_sig_chk                  = FS_OFFSET##vers##_NO_NCA_SIG_CHK, \
+    .no_cnt_chk                      = FS_OFFSET##vers##_NO_CNT_CHK, \
 }
 
 // Actually define offset structs

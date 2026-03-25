@@ -69,10 +69,12 @@ static const fs_offsets_t *fs_offsets;
 #define GENERATE_ADRP(register, page_addr) (0x90000000 | ((((page_addr) >> 12) & 0x3) << 29) | ((((page_addr) >> 12) & 0x1FFFFC) << 3) | ((register) & 0x1F))
 #define GENERATE_BRANCH(source, destination) (0x14000000 | ((((destination) - (source)) >> 2) & 0x3FFFFFF))
 #define GENERATE_NOP() (0xD503201F)
+#define GENERATE_RET0() (0x2A1F03E0)
 
 #define INJECT_HOOK(offset, destination) hook_function(INJECT_OFFSET(uintptr_t, offset), (uintptr_t)&destination)
 #define INJECT_HOOK_RELATIVE(offset, relative_destination) hook_function(INJECT_OFFSET(uintptr_t, offset), INJECT_OFFSET(uintptr_t, offset) + relative_destination)
 #define INJECT_NOP(offset) write_nop(INJECT_OFFSET(uintptr_t, offset))
+#define INJECT_RET0(offset) write_ret0(INJECT_OFFSET(uintptr_t, offset))
 
 // emuMMC
 extern _sdmmc_accessor_gc sdmmc_accessor_gc;
@@ -265,6 +267,11 @@ void write_nop(uintptr_t source)
     _write32(source, GENERATE_NOP());
 }
 
+void write_ret0(uintptr_t source)
+{
+    _write32(source, GENERATE_RET0());
+}
+
 void write_adrp_add(int reg, uintptr_t pc, uintptr_t add_rel_offset, intptr_t destination)
 {
     uintptr_t add_opcode_location = pc + add_rel_offset;
@@ -315,6 +322,12 @@ void populate_function_pointers(void)
     nand_mutex = INJECT_OFFSET(void *, fs_offsets->nand_mutex);
     active_partition = INJECT_OFFSET(volatile int *, fs_offsets->active_partition);
     sdmmc_das_handle = INJECT_OFFSET(volatile Handle *, fs_offsets->sdmmc_das_handle);
+}
+
+void patch_fs(void)
+{
+    INJECT_NOP(fs_offsets->no_nca_sig_chk);
+    INJECT_RET0(fs_offsets->no_cnt_chk);
 }
 
 void write_nops(void)
@@ -427,6 +440,7 @@ void __init()
     _map_fs_rw();
     setup_hooks();
     populate_function_pointers();
+    patch_fs();
     write_nops();
     setup_nintendo_paths();
     _unmap_fs_rw();

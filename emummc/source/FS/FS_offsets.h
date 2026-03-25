@@ -50,6 +50,9 @@ typedef struct {
     uintptr_t sdmmc_das_handle;
     // NOPs
     uintptr_t sd_das_init;
+    // FS sigchk
+    uintptr_t no_nca_sig_chk;
+    uintptr_t no_cnt_chk;
     // Nintendo Paths
     fs_offsets_nintendo_path_t nintendo_paths[];
 } fs_offsets_t;

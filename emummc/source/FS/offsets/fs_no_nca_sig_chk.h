@@ -1,0 +1,84 @@
+/*
+ * Copyright (c) 2019 m4xw <m4x@m4xw.net>
+ * Copyright (c) 2019 Atmosphere-NX
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#define FS_OFFSET_100_NO_NCA_SIG_CHK          0x3A79C
+#define FS_OFFSET_200_NO_NCA_SIG_CHK          0x3F720
+#define FS_OFFSET_200_EXFAT_NO_NCA_SIG_CHK    0x3F720
+#define FS_OFFSET_210_NO_NCA_SIG_CHK          0x3FAF8
+#define FS_OFFSET_210_EXFAT_NO_NCA_SIG_CHK    0x3FAF8
+#define FS_OFFSET_300_NO_NCA_SIG_CHK          0x49EC8
+#define FS_OFFSET_300_EXFAT_NO_NCA_SIG_CHK    0x49EC8
+#define FS_OFFSET_301_NO_NCA_SIG_CHK          0x49F34
+#define FS_OFFSET_301_EXFAT_NO_NCA_SIG_CHK    0x49F34
+#define FS_OFFSET_400_NO_NCA_SIG_CHK          0x57934
+#define FS_OFFSET_400_EXFAT_NO_NCA_SIG_CHK    0x57934
+#define FS_OFFSET_410_NO_NCA_SIG_CHK          0x57934
+#define FS_OFFSET_410_EXFAT_NO_NCA_SIG_CHK    0x57934
+#define FS_OFFSET_500_NO_NCA_SIG_CHK          0x7D490
+#define FS_OFFSET_500_EXFAT_NO_NCA_SIG_CHK    0x7D490
+#define FS_OFFSET_510_NO_NCA_SIG_CHK          0x7D860
+#define FS_OFFSET_510_EXFAT_NO_NCA_SIG_CHK    0x7D860
+#define FS_OFFSET_600_NO_NCA_SIG_CHK          0xEB08C
+#define FS_OFFSET_600_EXFAT_NO_NCA_SIG_CHK    0xF678C
+#define FS_OFFSET_700_NO_NCA_SIG_CHK          0xF25E4
+#define FS_OFFSET_700_EXFAT_NO_NCA_SIG_CHK    0xFDB94
+#define FS_OFFSET_800_NO_NCA_SIG_CHK          0xF49A4
+#define FS_OFFSET_800_EXFAT_NO_NCA_SIG_CHK    0xFFF54
+#define FS_OFFSET_810_NO_NCA_SIG_CHK          0xF49A4
+#define FS_OFFSET_810_EXFAT_NO_NCA_SIG_CHK    0xFFF54
+#define FS_OFFSET_900_NO_NCA_SIG_CHK          0xCA040
+#define FS_OFFSET_900_EXFAT_NO_NCA_SIG_CHK    0xCA040
+#define FS_OFFSET_910_NO_NCA_SIG_CHK          0xCA050
+#define FS_OFFSET_910_EXFAT_NO_NCA_SIG_CHK    0xCA050
+#define FS_OFFSET_1000_NO_NCA_SIG_CHK         0xDC020
+#define FS_OFFSET_1000_EXFAT_NO_NCA_SIG_CHK   0xDC020
+#define FS_OFFSET_1020_NO_NCA_SIG_CHK         0xDC480
+#define FS_OFFSET_1020_EXFAT_NO_NCA_SIG_CHK   0xDC480
+#define FS_OFFSET_1100_NO_NCA_SIG_CHK         0xE2F14
+#define FS_OFFSET_1100_EXFAT_NO_NCA_SIG_CHK   0xE2F14
+#define FS_OFFSET_1200_NO_NCA_SIG_CHK         0xEBD28
+#define FS_OFFSET_1200_EXFAT_NO_NCA_SIG_CHK   0xEBD28
+#define FS_OFFSET_1203_NO_NCA_SIG_CHK         0xEBE38
+#define FS_OFFSET_1203_EXFAT_NO_NCA_SIG_CHK   0xEBE38
+#define FS_OFFSET_1300_NO_NCA_SIG_CHK         0xEF320
+#define FS_OFFSET_1300_EXFAT_NO_NCA_SIG_CHK   0xEF320
+#define FS_OFFSET_1310_NO_NCA_SIG_CHK         0xEF320
+#define FS_OFFSET_1310_EXFAT_NO_NCA_SIG_CHK   0xEF320
+#define FS_OFFSET_1400_NO_NCA_SIG_CHK         0x1281CC
+#define FS_OFFSET_1400_EXFAT_NO_NCA_SIG_CHK   0x13354C
+#define FS_OFFSET_1500_NO_NCA_SIG_CHK         0x120DEC
+#define FS_OFFSET_1500_EXFAT_NO_NCA_SIG_CHK   0x12BD7C
+#define FS_OFFSET_1600_NO_NCA_SIG_CHK         0x148B2C
+#define FS_OFFSET_1600_EXFAT_NO_NCA_SIG_CHK   0x15380C
+#define FS_OFFSET_1603_NO_NCA_SIG_CHK         0x148B7C
+#define FS_OFFSET_1603_EXFAT_NO_NCA_SIG_CHK   0x15385C
+#define FS_OFFSET_1700_NO_NCA_SIG_CHK         0x24154
+#define FS_OFFSET_1700_EXFAT_NO_NCA_SIG_CHK   0x24154
+#define FS_OFFSET_1800_NO_NCA_SIG_CHK         0x245F4
+#define FS_OFFSET_1800_EXFAT_NO_NCA_SIG_CHK   0x245F4
+#define FS_OFFSET_1810_NO_NCA_SIG_CHK         0x245F4
+#define FS_OFFSET_1810_EXFAT_NO_NCA_SIG_CHK   0x245F4
+#define FS_OFFSET_1900_NO_NCA_SIG_CHK         0x21478
+#define FS_OFFSET_1900_EXFAT_NO_NCA_SIG_CHK   0x21478
+#define FS_OFFSET_2000_NO_NCA_SIG_CHK         0x23B88
+#define FS_OFFSET_2000_EXFAT_NO_NCA_SIG_CHK   0x23B88
+#define FS_OFFSET_2010_NO_NCA_SIG_CHK         0x23B88
+#define FS_OFFSET_2010_EXFAT_NO_NCA_SIG_CHK   0x23B88
+#define FS_OFFSET_2100_NO_NCA_SIG_CHK         0x26960
+#define FS_OFFSET_2100_EXFAT_NO_NCA_SIG_CHK   0x26960
+#define FS_OFFSET_2120_NO_NCA_SIG_CHK         0x26960
+#define FS_OFFSET_2120_EXFAT_NO_NCA_SIG_CHK   0x26960
