@@ -48,6 +48,7 @@ dist: dist-no-debug
 	cp $(CURRENT_DIRECTORY)/stratosphere/pm/$(ATMOSPHERE_OUT_DIR)/pm.elf $(DIST_DIR)/pm.elf
 	cp $(CURRENT_DIRECTORY)/stratosphere/ro/$(ATMOSPHERE_OUT_DIR)/ro.elf $(DIST_DIR)/ro.elf
 	cp $(CURRENT_DIRECTORY)/stratosphere/sm/$(ATMOSPHERE_OUT_DIR)/sm.elf $(DIST_DIR)/sm.elf
+	cp $(CURRENT_DIRECTORY)/stratosphere/sp/$(ATMOSPHERE_OUT_DIR)/sp.elf $(DIST_DIR)/sp.elf
 	cp $(CURRENT_DIRECTORY)/stratosphere/spl/$(ATMOSPHERE_OUT_DIR)/spl.elf $(DIST_DIR)/spl.elf
 	cp $(CURRENT_DIRECTORY)/stratosphere/TioServer/$(ATMOSPHERE_OUT_DIR)/TioServer.elf $(DIST_DIR)/TioServer.elf
 	cp $(CURRENT_DIRECTORY)/stratosphere/memlet/$(ATMOSPHERE_OUT_DIR)/memlet.elf $(DIST_DIR)/memlet.elf
@@ -92,6 +93,9 @@ dist-no-debug: package3 $(CURRENT_DIRECTORY)/$(ATMOSPHERE_OUT_DIR)
 	mkdir -p $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/010000000000b240
 	mkdir -p $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/010000000000d609
 	mkdir -p $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/010000000000d623
+	mkdir -p $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/42000000515ba7c3
+	mkdir -p $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/42000000515ba7c3/flags
+	@touch $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/42000000515ba7c3/flags/boot2.flag
 	cp stratosphere/boot2/$(ATMOSPHERE_OUT_DIR)/boot2.nsp $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/0100000000000008/exefs.nsp
 	cp stratosphere/dmnt/$(ATMOSPHERE_OUT_DIR)/dmnt.nsp $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/010000000000000d/exefs.nsp
 	cp stratosphere/cs/$(ATMOSPHERE_OUT_DIR)/cs.nsp $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/0100000000000017/exefs.nsp
@@ -107,6 +111,7 @@ dist-no-debug: package3 $(CURRENT_DIRECTORY)/$(ATMOSPHERE_OUT_DIR)
 	cp stratosphere/dmnt.gen2/$(ATMOSPHERE_OUT_DIR)/dmnt.gen2.nsp $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/010000000000d609/exefs.nsp
 	cp stratosphere/TioServer/$(ATMOSPHERE_OUT_DIR)/TioServer.nsp $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/010000000000d623/exefs.nsp
 	cp stratosphere/memlet/$(ATMOSPHERE_OUT_DIR)/memlet.nsp $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/0100000000000421/exefs.nsp
+	cp stratosphere/sp/$(ATMOSPHERE_OUT_DIR)/sp.nsp $(DIST_DIR)/stratosphere_romfs/atmosphere/contents/42000000515ba7c3/exefs.nsp
 	@PATH="$(DEVKITPRO)/tools/bin:$$PATH" build_romfs $(DIST_DIR)/stratosphere_romfs $(DIST_DIR)/atmosphere/stratosphere.romfs
 	rm -r $(DIST_DIR)/stratosphere_romfs
 	cp troposphere/reboot_to_payload/reboot_to_payload.nro $(DIST_DIR)/switch/reboot_to_payload.nro
