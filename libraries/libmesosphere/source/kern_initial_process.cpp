@@ -15,6 +15,10 @@
  */
 #include <mesosphere.hpp>
 
+/* FS patches. */
+#include <mesosphere/fs_patches_sys_patch_variation.hpp>
+// # include <mesosphere/fs_patches_embedded_variation.hpp>
+
 namespace ams::kern {
 
     namespace {
@@ -156,6 +160,7 @@ namespace ams::kern {
 
                     /* Load the process. */
                     reader.Load(pg, data);
+                    ApplyFsPatches(params.program_id, current, reader.GetBinarySize(), process_pg);
 
                     /* If necessary, close/release the aligned part of the data we just loaded. */
                     if (const size_t aligned_bin_size = util::AlignDown(binary_size, PageSize); aligned_bin_size != 0 && src_pool != dst_pool) {
