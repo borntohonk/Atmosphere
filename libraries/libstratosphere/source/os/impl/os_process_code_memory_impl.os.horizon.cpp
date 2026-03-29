@@ -21,6 +21,12 @@ namespace ams::os::impl {
 
     namespace {
 
+        constexpr bool IsValidCodeMemorySourceState(svc::MemoryState state) {
+            return state == svc::MemoryState_Normal ||
+                   state == svc::MemoryState_CodeData ||
+                   state == svc::MemoryState_AliasCodeData;
+        }
+
         class ProcessAddressSpaceAllocator final : public AddressSpaceAllocatorBase<u64, u64> {
             private:
                 using Base = AddressSpaceAllocatorBase<u64, u64>;
@@ -86,7 +92,7 @@ namespace ams::os::impl {
                                 svc::PageInfo page_info;
                                 R_ABORT_UNLESS(svc::QueryProcessMemory(std::addressof(memory_info), std::addressof(page_info), handle, cur_address));
 
-                                R_UNLESS(memory_info.state == svc::MemoryState_Normal,                  os::ResultInvalidProcessMemory());
+                                R_UNLESS(IsValidCodeMemorySourceState(memory_info.state),               os::ResultInvalidProcessMemory());
                                 R_UNLESS(memory_info.permission == svc::MemoryPermission_ReadWrite,     os::ResultInvalidProcessMemory());
                                 R_UNLESS(memory_info.attribute == static_cast<svc::MemoryAttribute>(0), os::ResultInvalidProcessMemory());
 

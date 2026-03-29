@@ -1087,11 +1087,11 @@ namespace ams::kern {
         /* Lock the table. */
         KScopedLightLock lk(m_general_lock);
 
-        /* Verify that the source memory is normal heap. */
+        /* Verify that the source memory can legally back code memory. */
         KMemoryState src_state;
         KMemoryPermission src_perm;
         size_t num_src_allocator_blocks;
-        R_TRY(this->CheckMemoryState(std::addressof(src_state), std::addressof(src_perm), nullptr, std::addressof(num_src_allocator_blocks), src_address, size, KMemoryState_All, KMemoryState_Normal, KMemoryPermission_All, KMemoryPermission_UserReadWrite, KMemoryAttribute_All, KMemoryAttribute_None));
+        R_TRY(this->CheckMemoryState(std::addressof(src_state), std::addressof(src_perm), nullptr, std::addressof(num_src_allocator_blocks), src_address, size, KMemoryState_FlagCanCodeMemory, KMemoryState_FlagCanCodeMemory, KMemoryPermission_All, KMemoryPermission_UserReadWrite, KMemoryAttribute_All, KMemoryAttribute_None));
 
         /* Verify that the destination memory is unmapped. */
         size_t num_dst_allocator_blocks;
@@ -1151,9 +1151,10 @@ namespace ams::kern {
         /* Lock the table. */
         KScopedLightLock lk(m_general_lock);
 
-        /* Verify that the source memory is locked normal heap. */
+        /* Verify that the source memory is locked code-memory-capable heap. */
+        KMemoryState src_state;
         size_t num_src_allocator_blocks;
-        R_TRY(this->CheckMemoryState(std::addressof(num_src_allocator_blocks), src_address, size, KMemoryState_All, KMemoryState_Normal, KMemoryPermission_None, KMemoryPermission_None, KMemoryAttribute_All, KMemoryAttribute_Locked));
+        R_TRY(this->CheckMemoryState(std::addressof(src_state), nullptr, nullptr, std::addressof(num_src_allocator_blocks), src_address, size, KMemoryState_FlagCanCodeMemory, KMemoryState_FlagCanCodeMemory, KMemoryPermission_None, KMemoryPermission_None, KMemoryAttribute_All, KMemoryAttribute_Locked));
 
         /* Verify that the destination memory is aliasable code. */
         size_t num_dst_allocator_blocks;
@@ -1229,8 +1230,8 @@ namespace ams::kern {
             R_TRY(this->Operate(updater.GetPageList(), src_address, num_pages, Null<KPhysicalAddress>, false, src_properties, OperationType_ChangePermissions, false));
 
             /* Apply the memory block updates. */
-            m_memory_block_manager.Update(std::addressof(dst_allocator), dst_address, num_pages, KMemoryState_None,   KMemoryPermission_None,          KMemoryAttribute_None, KMemoryBlockDisableMergeAttribute_None, KMemoryBlockDisableMergeAttribute_Normal);
-            m_memory_block_manager.Update(std::addressof(src_allocator), src_address, num_pages, KMemoryState_Normal, KMemoryPermission_UserReadWrite, KMemoryAttribute_None, KMemoryBlockDisableMergeAttribute_None, KMemoryBlockDisableMergeAttribute_Locked);
+            m_memory_block_manager.Update(std::addressof(dst_allocator), dst_address, num_pages, KMemoryState_None, KMemoryPermission_None,          KMemoryAttribute_None, KMemoryBlockDisableMergeAttribute_None, KMemoryBlockDisableMergeAttribute_Normal);
+            m_memory_block_manager.Update(std::addressof(src_allocator), src_address, num_pages, src_state,          KMemoryPermission_UserReadWrite, KMemoryAttribute_None, KMemoryBlockDisableMergeAttribute_None, KMemoryBlockDisableMergeAttribute_Locked);
 
             /* Note that we reprotected pages. */
             reprotected_pages = true;
