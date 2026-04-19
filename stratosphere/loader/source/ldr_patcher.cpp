@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <stratosphere.hpp>
+#include "exefs_patches.hpp"
 #include "ldr_patcher.hpp"
 
 namespace ams::ldr {
@@ -107,12 +108,119 @@ namespace ams::ldr {
             const EmbeddedPatchEntry *entries;
         };
 
-        #include "ldr_embedded_es_patches.inc"
-        #include "ldr_embedded_nifm_patches.inc"
-        #include "ldr_embedded_nim_patches.inc"
+        // #include "ldr_embedded_es_patches.inc"
+        // #include "ldr_embedded_nifm_patches.inc"
+        // #include "ldr_embedded_nim_patches.inc"
         #include "ldr_embedded_usb_patches.inc"
         #include "ldr_embedded_am_patches.inc"
 
+        exefs::ModuleType ToExefsModuleType(PatchModuleType module_type) {
+            switch (module_type) {
+                case PatchModuleType::Any:
+                    return exefs::ModuleType::Any;
+                case PatchModuleType::Rtld:
+                    return exefs::ModuleType::Rtld;
+                case PatchModuleType::Main:
+                    return exefs::ModuleType::Main;
+                case PatchModuleType::Sdk:
+                    return exefs::ModuleType::Sdk;
+                case PatchModuleType::Subsdk:
+                    return exefs::ModuleType::Subsdk;
+                case PatchModuleType::BrowserDll:
+                    return exefs::ModuleType::BrowserDll;
+                AMS_UNREACHABLE_DEFAULT_CASE();
+            }
+        }
+
+        bool IsVersionInRange(hos::Version version, hos::Version min_version, hos::Version max_version) {
+            return min_version <= version && version <= max_version;
+        }
+
+        bool MatchesModuleType(exefs::ModuleType expected, exefs::ModuleType actual) {
+            return expected == exefs::ModuleType::Any || expected == actual;
+        }
+
+        bool TryApplyPatternPatch(const exefs::PatternPatch &patch, uintptr_t mapped_nso, size_t mapped_size) {
+            const auto version = hos::GetVersion();
+            if (!IsVersionInRange(version, patch.min_version, patch.max_version)) {
+                return false;
+            }
+
+            u8 *mapped = reinterpret_cast<u8 *>(mapped_nso);
+            for (size_t i = 0; i + patch.pattern.size <= mapped_size; ++i) {
+                size_t matched = 0;
+                while (matched < patch.pattern.size) {
+                    const auto expected = patch.pattern.data[matched];
+                    if (expected != exefs::PatternWildcard && expected != mapped[i + matched]) {
+                        break;
+                    }
+                    ++matched;
+                }
+
+                if (matched != patch.pattern.size) {
+                    continue;
+                }
+
+                const ptrdiff_t instruction_offset = static_cast<ptrdiff_t>(i) + static_cast<ptrdiff_t>(patch.instruction_offset);
+                if (instruction_offset < 0 || instruction_offset + static_cast<ptrdiff_t>(sizeof(u32)) > static_cast<ptrdiff_t>(mapped_size)) {
+                    continue;
+                }
+
+                u32 instruction = 0;
+                std::memcpy(std::addressof(instruction), mapped + instruction_offset, sizeof(instruction));
+                if (!patch.condition(instruction)) {
+                    continue;
+                }
+
+                const ptrdiff_t write_offset = instruction_offset + static_cast<ptrdiff_t>(patch.patch_offset);
+                if (write_offset < 0 || write_offset > static_cast<ptrdiff_t>(mapped_size)) {
+                    continue;
+                }
+
+                const auto patch_data = patch.patch(instruction);
+                if (write_offset + patch_data.size > static_cast<ptrdiff_t>(mapped_size)) {
+                    continue;
+                }
+
+                u8 *write_ptr = mapped + write_offset;
+                if (patch.applied(write_ptr, instruction)) {
+                    return true;
+                }
+
+                std::memcpy(write_ptr, patch_data.data, patch_data.size);
+                return true;
+            }
+
+            return false;
+        }
+
+    }
+
+    void ApplyProgramPatchesToModule(ncm::ProgramId program_id, PatchModuleType module_type, const u8 *module_id_data, uintptr_t mapped_nso, size_t mapped_size) {
+        ro::ModuleId module_id{};
+        std::memcpy(std::addressof(module_id.data), module_id_data, sizeof(module_id.data));
+
+        const auto exefs_module_type = ToExefsModuleType(module_type);
+        const auto version           = hos::GetVersion();
+
+        for (const auto &target : exefs::GetPatchTargets()) {
+            if (target.program_id != program_id) {
+                continue;
+            }
+            if (!MatchesModuleType(target.module_type, exefs_module_type)) {
+                continue;
+            }
+            if (!IsVersionInRange(version, target.min_version, target.max_version)) {
+                continue;
+            }
+            if (target.match_module_id && std::memcmp(std::addressof(target.module_id), std::addressof(module_id), sizeof(module_id)) != 0) {
+                continue;
+            }
+
+            for (size_t i = 0; i < target.num_patterns; ++i) {
+                static_cast<void>(TryApplyPatternPatch(target.patterns[i], mapped_nso, mapped_size));
+            }
+        }
     }
 
     /* Apply IPS patches. */
@@ -157,37 +265,37 @@ namespace ams::ldr {
             }
         }
 
-        for (const auto &patch : DisableTicketVerificationPatches) {
-            if (std::memcmp(std::addressof(patch.module_id), std::addressof(module_id), sizeof(module_id)) == 0) {
-                for (size_t i = 0; i < patch.num_entries; ++i) {
-                    const auto &entry = patch.entries[i];
-                    if (entry.offset + entry.size <= mapped_size) {
-                        std::memcpy(reinterpret_cast<void *>(mapped_nso + entry.offset), entry.data, entry.size);
-                    }
-                }
-            }
-        }
+        // for (const auto &patch : DisableTicketVerificationPatches) {
+        //     if (std::memcmp(std::addressof(patch.module_id), std::addressof(module_id), sizeof(module_id)) == 0) {
+        //         for (size_t i = 0; i < patch.num_entries; ++i) {
+        //             const auto &entry = patch.entries[i];
+        //             if (entry.offset + entry.size <= mapped_size) {
+        //                 std::memcpy(reinterpret_cast<void *>(mapped_nso + entry.offset), entry.data, entry.size);
+        //             }
+        //         }
+        //     }
+        // }
 
-        for (const auto &patch : ForceCommunicationEnabledPatches) {
-            if (std::memcmp(std::addressof(patch.module_id), std::addressof(module_id), sizeof(module_id)) == 0) {
-                for (size_t i = 0; i < patch.num_entries; ++i) {
-                    const auto &entry = patch.entries[i];
-                    if (entry.offset + entry.size <= mapped_size) {
-                        std::memcpy(reinterpret_cast<void *>(mapped_nso + entry.offset), entry.data, entry.size);
-                    }
-                }
-            }
-        }
+        // for (const auto &patch : ForceCommunicationEnabledPatches) {
+        //     if (std::memcmp(std::addressof(patch.module_id), std::addressof(module_id), sizeof(module_id)) == 0) {
+        //         for (size_t i = 0; i < patch.num_entries; ++i) {
+        //             const auto &entry = patch.entries[i];
+        //             if (entry.offset + entry.size <= mapped_size) {
+        //                 std::memcpy(reinterpret_cast<void *>(mapped_nso + entry.offset), entry.data, entry.size);
+        //             }
+        //         }
+        //     }
+        // }
 
-        for (const auto &patch : AmsProdinfoBlankerFix) {
-            if (std::memcmp(std::addressof(patch.module_id), std::addressof(module_id), sizeof(module_id)) == 0) {
-                for (size_t i = 0; i < patch.num_entries; ++i) {
-                    const auto &entry = patch.entries[i];
-                    if (entry.offset + entry.size <= mapped_size) {
-                        std::memcpy(reinterpret_cast<void *>(mapped_nso + entry.offset), entry.data, entry.size);
-                    }
-                }
-            }
-        }
+        // for (const auto &patch : AmsProdinfoBlankerFix) {
+        //     if (std::memcmp(std::addressof(patch.module_id), std::addressof(module_id), sizeof(module_id)) == 0) {
+        //         for (size_t i = 0; i < patch.num_entries; ++i) {
+        //             const auto &entry = patch.entries[i];
+        //             if (entry.offset + entry.size <= mapped_size) {
+        //                 std::memcpy(reinterpret_cast<void *>(mapped_nso + entry.offset), entry.data, entry.size);
+        //             }
+        //         }
+        //    }
+    //    }
     }
 }
