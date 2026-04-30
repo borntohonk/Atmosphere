@@ -1,79 +1,9 @@
-/*
- * Copyright (c) Atmosphère-NX
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
- *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 #pragma once
-#include <vapours.hpp>
-#include <stratosphere/sf.hpp>
-#include <stratosphere/fs/fs_error_info.hpp>
-#include <stratosphere/fs/fs_game_card.hpp>
-#include <stratosphere/fs/fs_mmc.hpp>
-#include <stratosphere/fs/fs_speed_emulation.hpp>
+#include <stratosphere.hpp>
+#include <stratosphere/fssrv/fssrv_interface_adapters.hpp>
+#include <stratosphere/fssrv/sf/fssrv_sf_i_device_operator.hpp>
 
-namespace ams::fssrv::sf {
-
-    struct DeviceOperatorHostControllerStatus {
-        u8 data[0xC];
-    };
-    static_assert(util::is_pod<DeviceOperatorHostControllerStatus>::value);
-    static_assert(sizeof(DeviceOperatorHostControllerStatus) == 0xC);
-
-    struct DeviceOperatorGameCardUpdatePartitionInfo {
-        u32 version;
-        u32 reserved;
-        u64 id;
-    };
-    static_assert(util::is_pod<DeviceOperatorGameCardUpdatePartitionInfo>::value);
-    static_assert(sizeof(DeviceOperatorGameCardUpdatePartitionInfo) == 0x10);
-
-    struct DeviceOperatorGameCardErrorInfo {
-        u16 game_card_crc_error_num;
-        u16 reserved1;
-        u16 asic_crc_error_num;
-        u16 reserved2;
-        u16 refresh_num;
-        u16 reserved3;
-        u16 retry_limit_out_num;
-        u16 timeout_retry_num;
-    };
-    static_assert(util::is_pod<DeviceOperatorGameCardErrorInfo>::value);
-    static_assert(sizeof(DeviceOperatorGameCardErrorInfo) == 0x10);
-
-    struct DeviceOperatorGameCardSessionCreationDelay {
-        u8 enabled;
-        u8 forced;
-        u8 reserved[2];
-        u32 minimum_delay_micro_seconds;
-    };
-    static_assert(util::is_pod<DeviceOperatorGameCardSessionCreationDelay>::value);
-    static_assert(sizeof(DeviceOperatorGameCardSessionCreationDelay) == 0x8);
-
-    struct DeviceOperatorDeviceSimulationEvent {
-        u32 device_type;
-        u32 detection_mode;
-        u32 access_failure_event;
-        u32 target_operation;
-        u32 access_failure_result;
-    };
-    static_assert(util::is_pod<DeviceOperatorDeviceSimulationEvent>::value);
-    static_assert(sizeof(DeviceOperatorDeviceSimulationEvent) == 0x14);
-
-}
-
-/* TODO */
-/* ACCURATE_TO_VERSION: 20.0.0.0 */
-#define AMS_FSSRV_I_DEVICE_OPERATOR_INTERFACE_INFO(C, H) \
+#define AMS_FS_MITM_I_DEVICE_OPERATOR_INTERFACE_INFO(C, H) \
     AMS_SF_METHOD_INFO(C, H,   0, Result, IsSdCardInserted,                            (ams::sf::Out<bool> out),                                                                                                  (out))                                                                                        \
     AMS_SF_METHOD_INFO(C, H,   1, Result, GetSdCardSpeedMode,                          (ams::sf::Out<s64> out),                                                                                                   (out))                                                                                        \
     AMS_SF_METHOD_INFO(C, H,   2, Result, GetSdCardCid,                                (ams::sf::OutBuffer out_buffer, s64 size),                                                                                 (out_buffer, size))                                                                           \
@@ -134,4 +64,86 @@ namespace ams::fssrv::sf {
     AMS_SF_METHOD_INFO(C, H, 500, Result, SetDeviceSimulationEvent,                    (u32 device_type, u32 detection_mode, u32 access_failure_event, u32 target_operation, u32 access_failure_result),          (device_type, detection_mode, access_failure_event, target_operation, access_failure_result)) \
     AMS_SF_METHOD_INFO(C, H, 501, Result, ClearDeviceSimulationEvent,                  (u32 device_type),                                                                                                         (device_type))     
 
-AMS_SF_DEFINE_INTERFACE(ams::fssrv::sf, IDeviceOperator, AMS_FSSRV_I_DEVICE_OPERATOR_INTERFACE_INFO, 0x1484E21C)
+AMS_SF_DEFINE_MITM_INTERFACE(ams::mitm::fs, IDeviceOperatorMitmInterface, AMS_FS_MITM_I_DEVICE_OPERATOR_INTERFACE_INFO, 0x1484E21C)
+
+namespace ams::mitm::fs {
+
+    class FsRemoteDeviceOperatorMitmService {
+        private:
+            ::FsDeviceOperator m_operator;
+
+        public:
+            explicit FsRemoteDeviceOperatorMitmService(::FsDeviceOperator &o);
+            virtual ~FsRemoteDeviceOperatorMitmService();
+
+        public:
+            Result IsSdCardInserted(ams::sf::Out<bool> out);
+            Result GetSdCardSpeedMode(ams::sf::Out<s64> out);
+            Result GetSdCardCid(ams::sf::OutBuffer out_buffer, s64 size);
+            Result GetSdCardUserAreaSize(ams::sf::Out<s64> out);
+            Result GetSdCardProtectedAreaSize(ams::sf::Out<s64> out);
+            Result GetAndClearSdCardErrorInfo(ams::sf::Out<ams::fs::StorageErrorInfo> out_error_info, ams::sf::Out<s64> out_log_size, ams::sf::OutBuffer out_buffer, s64 log_buffer_size);
+            Result GetSdCardHostControllerStatus(ams::sf::Out<ams::fssrv::sf::DeviceOperatorHostControllerStatus> out);
+            Result SetSdCardActivationMode(u8 mode);
+            Result TryGetSdCardInfo(ams::sf::OutBuffer out_buffer, s64 size);
+
+            Result GetMmcCid(ams::sf::OutBuffer out_buffer, s64 size);
+            Result GetMmcSpeedMode(ams::sf::Out<s64> out);
+            Result EraseMmc(ams::fs::MmcPartition partition);
+            Result GetMmcPartitionSize(ams::sf::Out<s64> out, ams::fs::MmcPartition partition);
+            Result GetMmcPatrolCount(ams::sf::Out<u32> out);
+            Result GetAndClearMmcErrorInfo(ams::sf::Out<ams::fs::StorageErrorInfo> out_error_info, ams::sf::Out<s64> out_log_size, ams::sf::OutBuffer out_buffer, s64 log_buffer_size);
+            Result GetMmcExtendedCsd(ams::sf::OutBuffer out_buffer, s64 size);
+            Result SuspendMmcPatrol();
+            Result ResumeMmcPatrol();
+            Result EraseMmcWithRange(ams::fs::MmcPartition partition, u64 offset, u64 size);
+            Result MarkBeforeEraseMmcPartitionUserData();
+            Result CheckAfterEraseMmcPartitionUserData();
+
+            Result IsGameCardInserted(ams::sf::Out<bool> out);
+            Result EraseGameCard(u32 game_card_size, u64 normal_area_size);
+            Result GetGameCardHandle(ams::sf::Out<u32> out);
+            Result GetGameCardUpdatePartitionInfo(ams::sf::Out<ams::fssrv::sf::DeviceOperatorGameCardUpdatePartitionInfo> out, u32 handle);
+            Result FinalizeGameCardDriver();
+            Result GetGameCardAttribute(ams::sf::Out<ams::fs::GameCardAttribute> out, u32 handle);
+            Result GetGameCardDeviceCertificateDeprecated(ams::sf::OutBuffer out_buffer, s64 size, u32 handle);
+            Result GetGameCardDeviceCertificate(ams::sf::Out<s64> out_size, ams::sf::OutBuffer out_buffer, s64 size, u32 handle);
+            Result GetGameCardAsicInfo(const ams::sf::OutBuffer &rma_info, s64 rma_info_size, const ams::sf::InBuffer &fw_buffer, s64 fw_buffer_size);
+            Result GetGameCardIdSet(ams::sf::OutBuffer out_buffer, s64 size);
+            Result WriteToGameCardDirectly(s64 offset, ams::sf::OutBuffer out_buffer, s64 size);
+            Result SetVerifyWriteEnableFlag(bool en);
+            Result GetGameCardImageHash(ams::sf::OutBuffer out_buffer, s64 size, u32 handle);
+            Result GetGameCardDeviceIdForProdCard(ams::sf::OutBuffer out_buffer, s64 size, const ams::sf::InBuffer &card_header, s64 card_header_size);
+            Result EraseAndWriteParamDirectly(const ams::sf::InBuffer &in_buffer, s64 size);
+            Result ReadParamDirectly(ams::sf::OutBuffer out_buffer, s64 size);
+            Result ForceEraseGameCard();
+            Result GetGameCardErrorInfo(ams::sf::Out<ams::fssrv::sf::DeviceOperatorGameCardErrorInfo> out);
+            Result GetGameCardErrorReportInfo(ams::sf::Out<ams::fs::GameCardErrorReportInfo> out);
+            Result GetGameCardDeviceId(ams::sf::OutBuffer out_buffer, s64 size);
+            Result ChallengeCardExistence(ams::sf::OutBuffer out_buffer, const ams::sf::InBuffer &seed, const ams::sf::InBuffer &value, u32 handle);
+
+            Result GetGameCardCompatibilityType(ams::sf::Out<ams::fs::GameCardCompatibilityType> out, u32 handle);
+
+            Result GetGameCardAsicCertificate(ams::sf::OutBuffer out_buffer);
+            Result GetGameCardCardHeader(ams::sf::OutBuffer out_buffer, s64 size, u32 handle);
+            Result SetGameCardSessionCreationDelay(bool enabled, u32 minimum_delay_micro_seconds, bool forced);
+            Result GetGameCardApplicationIdList(ams::sf::Out<u16> out_count, ams::sf::OutBuffer out_buffer, s64 size, u32 handle);
+            Result RegisterGameCardConfigurationData(const ams::sf::InBuffer &in_buffer, s64 size);
+            Result GetGameCardDetailedErrorReportInfo(ams::sf::OutBuffer out_buffer);
+
+            Result SetSpeedEmulationMode(ams::fs::SpeedEmulationMode mode);
+            Result GetSpeedEmulationMode(ams::sf::Out<ams::fs::SpeedEmulationMode> out);
+            Result SetApplicationStorageSpeed(s32 speed);
+            Result SetGameCardClockRateForSpeedEmulation(s32 clock_rate);
+            Result ClearGameCardClockRateForSpeedEmulation();
+
+            Result SuspendSdmmcControl();
+            Result ResumeSdmmcControl();
+            Result GetSdmmcConnectionStatus(ams::sf::Out<s32> out_a, ams::sf::Out<s32> out_b, u32 port);
+
+            Result SetDeviceSimulationEvent(u32 device_type, u32 detection_mode, u32 access_failure_event, u32 target_operation, u32 access_failure_result);
+            Result ClearDeviceSimulationEvent(u32 device_type);
+    };
+    static_assert(IsIDeviceOperatorMitmInterface<FsRemoteDeviceOperatorMitmService>);
+
+}

@@ -45,9 +45,9 @@ namespace ams::fs {
         fat::FatSafeInfo bis_system_fat_safe_info;
         fat::FatSafeInfo bis_user_fat_safe_info;
 
-        u8 reserved[0x18];
+        u8 reserved[0x98];
     };
-    static_assert(sizeof(FileSystemProxyErrorInfo) == 0x80);
+    static_assert(sizeof(FileSystemProxyErrorInfo) == 0x100);
     static_assert(util::is_pod<FileSystemProxyErrorInfo>::value);
 
     Result GetAndClearMmcErrorInfo(StorageErrorInfo *out_sei, size_t *out_log_size, char *out_log_buffer, size_t log_buffer_size);

@@ -17,6 +17,7 @@ Result fsOpenBisStorageFwd(Service* s, FsStorage* out, FsBisPartitionId partitio
 Result fsOpenDataStorageByCurrentProcessFwd(Service* s, FsStorage* out);
 Result fsOpenDataStorageByDataIdFwd(Service* s, FsStorage* out, u64 data_id, NcmStorageId storage_id);
 Result fsOpenDataStorageWithProgramIndexFwd(Service* s, FsStorage* out, u8 program_index);
+Result fsOpenDeviceOperatorFwd(Service* s, FsDeviceOperator* out);
 
 Result fsRegisterProgramIndexMapInfoFwd(Service* s, const void *buf, size_t buf_size, s32 count);
 

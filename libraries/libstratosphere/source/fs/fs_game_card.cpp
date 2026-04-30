@@ -148,6 +148,19 @@ namespace ams::fs {
         R_SUCCEED();
     }
 
+    Result GetGameCardCompatibilityType(GameCardCompatibilityType *out, GameCardHandle handle) {
+        auto fsp = impl::GetFileSystemProxyServiceObject();
+
+        /* Open a device operator. */
+        sf::SharedPointer<fssrv::sf::IDeviceOperator> device_operator;
+        AMS_FS_R_TRY(fsp->OpenDeviceOperator(std::addressof(device_operator)));
+
+        /* Get the compatibility type. */
+        AMS_FS_R_TRY(device_operator->GetGameCardCompatibilityType(out, handle));
+
+        R_SUCCEED();
+    }
+
     Result GetGameCardErrorReportInfo(GameCardErrorReportInfo *out) {
         auto fsp = impl::GetFileSystemProxyServiceObject();
 

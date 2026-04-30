@@ -48,6 +48,9 @@ namespace ams::fs {
     enum class GameCardCompatibilityType : u8 {
         Normal = 0,
         Terra  = 1,
+
+        Global = Normal,
+        China  = Terra,
     };
 
     struct GameCardErrorReportInfo {
@@ -87,6 +90,7 @@ namespace ams::fs {
 
     Result GetGameCardCid(void *dst, size_t size);
     Result GetGameCardDeviceId(void *dst, size_t size);
+    Result GetGameCardCompatibilityType(GameCardCompatibilityType *out, GameCardHandle handle);
 
     Result GetGameCardErrorReportInfo(GameCardErrorReportInfo *out);
 
