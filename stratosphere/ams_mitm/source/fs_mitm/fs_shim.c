@@ -58,6 +58,10 @@ Result fsOpenDataStorageWithProgramIndexFwd(Service* s, FsStorage* out, u8 progr
     );
 }
 
+Result fsOpenDeviceOperatorFwd(Service *s, FsDeviceOperator* out) {
+    return _fsOpenSession(s, &out->s, 400);
+}
+
 Result fsRegisterProgramIndexMapInfoFwd(Service* s, const void *buf, size_t buf_size, s32 count) {
     return serviceDispatchIn(s, 810, count,
         .buffer_attrs = { SfBufferAttr_HipcMapAlias | SfBufferAttr_In },

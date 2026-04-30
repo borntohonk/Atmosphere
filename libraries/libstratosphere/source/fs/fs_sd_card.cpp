@@ -158,6 +158,24 @@ namespace ams::fs {
         R_SUCCEED();
     }
 
+    Result GetSdCardHostControllerStatus(HostControllerStatus *out) {
+        /* Check pre-conditions. */
+        AMS_FS_R_UNLESS(out != nullptr, fs::ResultNullptrArgument());
+
+        auto fsp = impl::GetFileSystemProxyServiceObject();
+
+        /* Open a device operator. */
+        sf::SharedPointer<fssrv::sf::IDeviceOperator> device_operator;
+        AMS_FS_R_TRY(fsp->OpenDeviceOperator(std::addressof(device_operator)));
+
+        /* Get the status. */
+        HostControllerStatus status = {};
+        AMS_FS_R_TRY(device_operator->GetSdCardHostControllerStatus(std::addressof(status)));
+
+        std::memcpy(out, std::addressof(status), sizeof(*out));
+        R_SUCCEED();
+    }
+
     Result GetSdCardUserAreaSize(s64 *out) {
         /* Check pre-conditions. */
         AMS_FS_R_UNLESS(out != nullptr, fs::ResultNullptrArgument());

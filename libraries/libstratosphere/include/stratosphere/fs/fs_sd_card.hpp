@@ -41,6 +41,14 @@ namespace ams::fs {
     static_assert(util::is_pod<EncryptionSeed>::value);
     static_assert(sizeof(EncryptionSeed) == 0x10);
 
+    struct HostControllerStatus {
+        u8 data[0xC];
+    };
+    static_assert(util::is_pod<HostControllerStatus>::value);
+    static_assert(sizeof(HostControllerStatus) == 0xC);
+
+    using SdCardHostControllerStatus = HostControllerStatus;
+
     Result GetSdCardCid(void *dst, size_t size);
 
     inline void ClearSdCardCidSerialNumber(u8 *cid) {
@@ -52,6 +60,7 @@ namespace ams::fs {
     Result GetSdCardProtectedAreaSize(s64 *out);
 
     Result GetSdCardSpeedMode(SdCardSpeedMode *out);
+    Result GetSdCardHostControllerStatus(HostControllerStatus *out);
 
     Result MountSdCard(const char *name);
 
