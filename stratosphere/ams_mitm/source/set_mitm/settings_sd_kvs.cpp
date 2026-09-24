@@ -307,6 +307,21 @@ namespace ams::settings::fwdbg {
         }
 
         void LoadDefaultCustomSettings() {
+            /* Disable OLSC (online save cloud sync) communication.
+            * Prevents "Please wait" hang when launching games with Wi-Fi on
+            * and a linked account that has save cloud issues. */
+            R_ABORT_UNLESS(ParseSettingsItemValue("olsc", "default_auto_download_global_setting", "u8!0x0"));
+            R_ABORT_UNLESS(ParseSettingsItemValue("olsc", "default_auto_upload_global_setting",   "u8!0x0"));
+
+            /* Skips the "update required" check when launching a game */
+            R_ABORT_UNLESS(ParseSettingsItemValue("ns.application", "is_required_version_check_enabled", "u8!0x0"));
+
+            /* Stops the attempt to retrieve version lists from Nintendo */
+            R_ABORT_UNLESS(ParseSettingsItemValue("ns.notification", "enable_version_list", "u8!0x0"));
+            R_ABORT_UNLESS(ParseSettingsItemValue("ns.notification", "enable_request_on_cold_boot", "u8!0x0"));
+            R_ABORT_UNLESS(ParseSettingsItemValue("ns.notification", "enable_download_task_list", "u8!0x0"));
+            R_ABORT_UNLESS(ParseSettingsItemValue("npns", "background_processing", "u8!0x0"));
+
             /* Disable uploading error reports to Nintendo. */
             R_ABORT_UNLESS(ParseSettingsItemValue("eupld", "upload_enabled", "u8!0x0"));
 
