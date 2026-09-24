@@ -90,6 +90,40 @@ namespace ams::ldr {
             return NsoPaths[idx];
         }
 
+        PatchModuleType GetPatchModuleType(NsoIndex idx) {
+            switch (idx) {
+                case Nso_Rtld:
+                    return PatchModuleType::Rtld;
+                case Nso_Main:
+                    return PatchModuleType::Main;
+                case Nso_Sdk:
+                    return PatchModuleType::Sdk;
+                case Nso_SubSdk0:
+                case Nso_SubSdk1:
+                case Nso_SubSdk2:
+                case Nso_SubSdk3:
+                case Nso_SubSdk4:
+                case Nso_SubSdk5:
+                case Nso_SubSdk6:
+                case Nso_SubSdk7:
+                case Nso_SubSdk8:
+                case Nso_SubSdk9:
+                    return PatchModuleType::Subsdk;
+                case Nso_Wkc0:
+                case Nso_Wkc1:
+                case Nso_Wkc2:
+                case Nso_Wkc3:
+                case Nso_Wkc4:
+                case Nso_Wkc5:
+                case Nso_Wkc6:
+                case Nso_Wkc7:
+                case Nso_Wkc8:
+                case Nso_Wkc9:
+                    return PatchModuleType::BrowserDll;
+                AMS_UNREACHABLE_DEFAULT_CASE();
+            }
+        }
+
         struct ProcessInfo {
             os::NativeHandle process_handle;
             uintptr_t code_address;
@@ -696,7 +730,7 @@ namespace ams::ldr {
             R_SUCCEED();
         }
 
-        Result LoadAutoLoadModule(os::NativeHandle process_handle, fs::FileHandle file, const NsoHeader *nso_header, uintptr_t nso_address, size_t nso_size, size_t map_size) {
+        Result LoadAutoLoadModule(os::NativeHandle process_handle, fs::FileHandle file, ncm::ProgramId program_id, PatchModuleType module_type, const NsoHeader *nso_header, uintptr_t nso_address, size_t nso_size, size_t map_size) {
             const bool is_zbic = (nso_header->flags & NsoHeader::Flag_UseZbicCompression) != 0;
 
             /* Map and read data from file. */
@@ -730,8 +764,8 @@ namespace ams::ldr {
                 R_TRY(CheckSegmentHash(nso_header, map_address, NsoHeader::Segment_Ro));
                 R_TRY(CheckSegmentHash(nso_header, map_address, NsoHeader::Segment_Rw));
 
-                /* Apply embedded patches. */
-                ApplyEmbeddedPatchesToModule(nso_header->module_id, map_address, nso_size);
+                /* Apply loader-native pattern patches before legacy APIs. */
+                ApplyProgramPatchesToModule(program_id, module_type, nso_header->module_id, map_address, nso_size);
 
                 /* Apply IPS patches. */
                 LocateAndApplyIpsPatchesToModule(nso_header->module_id, map_address, nso_size);
@@ -755,7 +789,7 @@ namespace ams::ldr {
             R_SUCCEED();
         }
 
-        Result LoadAutoLoadModules(const ProcessInfo *process_info, const AutoLoadModuleContext &ctx, const ArgumentStore::Entry *argument) {
+        Result LoadAutoLoadModules(const ProcessInfo *process_info, const AutoLoadModuleContext &ctx, ncm::ProgramId program_id, const ArgumentStore::Entry *argument) {
             /* Load each NSO. */
             const uintptr_t total_end = process_info->code_address + process_info->total_size;
 
@@ -770,7 +804,7 @@ namespace ams::ldr {
                 R_TRY(fs::OpenFile(std::addressof(file), GetNsoPath(nso_idx), fs::OpenMode_Read));
                 ON_SCOPE_EXIT { fs::CloseFile(file); };
 
-                R_TRY(LoadAutoLoadModule(process_info->process_handle, file, ctx.headers + i,
+                R_TRY(LoadAutoLoadModule(process_info->process_handle, file, program_id, GetPatchModuleType(nso_idx), ctx.headers + i,
                       process_info->nso_address[i], process_info->nso_size[i], map_size));
             }
 
@@ -815,7 +849,7 @@ namespace ams::ldr {
             ON_RESULT_FAILURE { R_DISCARD(svc::CloseHandle(process_handle)); };
 
             /* Load all auto load modules. */
-            R_RETURN(LoadAutoLoadModules(out, ctx, argument));
+            R_RETURN(LoadAutoLoadModules(out, ctx, meta->aci->program_id, argument));
         }
 
     }
