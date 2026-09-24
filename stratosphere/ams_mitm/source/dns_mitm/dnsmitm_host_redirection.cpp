@@ -64,6 +64,9 @@ namespace ams::mitm::socket::resolver {
             return 1;
         }
 
+        constexpr const char HardcodedRedirections[] =
+            "127.0.0.1 *nintendo*\n";
+
         constexpr const char DefaultHostsFile[] =
             "# Nintendo telemetry servers\n"
             "127.0.0.1 receive-%.dg.srv.nintendo.net receive-%.er.srv.nintendo.net\n";
@@ -333,6 +336,12 @@ namespace ams::mitm::socket::resolver {
             R_ABORT_UNLESS(::fsFileWrite(std::addressof(default_file), 0, DefaultHostsFile, sizeof(DefaultHostsFile) - 1, ::FsWriteOption_Flush));
             ::fsFileClose(std::addressof(default_file));
         }
+
+        /* NEW: Always apply hardcoded redirections first (lowest priority,
+        will be overridden by anything added after due to emplace_front in AddRedirection),
+        this will force all of *nintendo* to be redirected to 127.0.0 without potential missing dns.mitm config files. */
+        Log(log_file, "Adding hardcoded redirections.\n");
+        ParseHostsFile(HardcodedRedirections);
 
         /* If we should, add the defaults. */
         if (add_defaults) {
