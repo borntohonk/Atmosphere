@@ -503,7 +503,7 @@ namespace ams::nxboot {
             storage_ctx.target_firmware = target_firmware;
             storage_ctx.lcd_vendor      = GetDisplayLcdVendor();
             storage_ctx.emummc_cfg      = g_emummc_cfg;
-            storage_ctx.flags[0]        = secmon::SecureMonitorConfigurationFlag_Default;
+            storage_ctx.flags[0]        = secmon::SecureMonitorConfigurationFlag_Default | secmon::SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary;
             storage_ctx.flags[1]        = secmon::SecureMonitorConfigurationFlag_None;
             storage_ctx.log_port        = uart::Port_ReservedDebug;
             storage_ctx.log_baud_rate   = 115200;
@@ -552,22 +552,6 @@ namespace ams::nxboot {
                                     storage_ctx.flags[0] |= secmon::SecureMonitorConfigurationFlag_BootConfigMemoryModeEnabled;
                                 } else {
                                     storage_ctx.flags[0] &= ~secmon::SecureMonitorConfigurationFlag_BootConfigMemoryModeEnabled;
-                                }
-                            } else if (std::strcmp(entry.key, "blank_prodinfo_sysmmc") == 0) {
-                                if (!emummc_enabled) {
-                                    if (entry.value[0] == '1') {
-                                        storage_ctx.flags[0] |= secmon::SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary;
-                                    } else {
-                                        storage_ctx.flags[0] &= ~secmon::SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary;
-                                    }
-                                }
-                            } else if (std::strcmp(entry.key, "blank_prodinfo_emummc") == 0) {
-                                if (emummc_enabled) {
-                                    if (entry.value[0] == '1') {
-                                        storage_ctx.flags[0] |= secmon::SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary;
-                                    } else {
-                                        storage_ctx.flags[0] &= ~secmon::SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary;
-                                    }
                                 }
                             } else if (std::strcmp(entry.key, "allow_writing_to_cal_sysmmc") == 0) {
                                 if (entry.value[0] == '1') {

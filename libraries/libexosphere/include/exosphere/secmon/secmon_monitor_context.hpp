@@ -32,7 +32,7 @@ namespace ams::secmon {
         SecureMonitorConfigurationFlag_ForceEnableUsb30                       = (1u << 7),
         SecureMonitorConfigurationFlag_BootConfigMemoryModeEnabled            = (1u << 8),
 
-        SecureMonitorConfigurationFlag_Default = SecureMonitorConfigurationFlag_IsDevelopmentFunctionEnabledForKernel,
+        SecureMonitorConfigurationFlag_Default = SecureMonitorConfigurationFlag_IsDevelopmentFunctionEnabledForKernel | SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary,
     };
 
     struct SecureMonitorStorageConfiguration {
@@ -101,7 +101,7 @@ namespace ams::secmon {
         constexpr bool IsDevelopmentFunctionEnabledForUser()    const { return (this->flags[0] & SecureMonitorConfigurationFlag_IsDevelopmentFunctionEnabledForUser)    != 0; }
         constexpr bool DisableUserModeExceptionHandlers()       const { return (this->flags[0] & SecureMonitorConfigurationFlag_DisableUserModeExceptionHandlers)       != 0; }
         constexpr bool EnableUserModePerformanceCounterAccess() const { return (this->flags[0] & SecureMonitorConfigurationFlag_EnableUserModePerformanceCounterAccess) != 0; }
-        constexpr bool ShouldUseBlankCalibrationBinary()        const { return (this->flags[0] & SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary)        != 0; }
+        constexpr bool ShouldUseBlankCalibrationBinary()        const { return true; }
         constexpr bool AllowWritingToCalibrationBinarySysmmc()  const { return (this->flags[0] & SecureMonitorConfigurationFlag_AllowWritingToCalibrationBinarySysmmc)  != 0; }
         constexpr bool IsUsb30ForceEnabled()                    const { return (this->flags[0] & SecureMonitorConfigurationFlag_ForceEnableUsb30)                       != 0; }
         constexpr bool IsBootConfigMemoryModeEnabled()          const { return (this->flags[0] & SecureMonitorConfigurationFlag_BootConfigMemoryModeEnabled)            != 0; }
