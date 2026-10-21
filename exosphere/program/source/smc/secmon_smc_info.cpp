@@ -331,6 +331,14 @@ namespace ams::secmon::smc {
                     /* Get whether usb 3.0 should be force-enabled. */
                     args.r[1] = GetSecmonConfiguration().IsUsb30ForceEnabled();
                     break;
+                case ConfigItem::ExosphereDisabledEmbeddedPatches:
+                    /* Get the mask of loader embedded patch modules that should not be applied. */
+                    args.r[1] = GetSecmonConfiguration().GetDisabledEmbeddedPatchesMask();
+                    break;
+                case ConfigItem::ExosphereNintendoDnsBlocking:
+                    /* Get whether dns.mitm should add the full nintendo servers blocking redirections. */
+                    args.r[1] = GetSecmonConfiguration().IsNintendoDnsBlockingEnabled();
+                    break;
                 case ConfigItem::ExosphereSupportedHosVersion:
                     /* Get information about the supported hos version. */
                     args.r[1] = (static_cast<u64>(ATMOSPHERE_SUPPORTED_HOS_VERSION_MAJOR & 0xFF) << 24) |

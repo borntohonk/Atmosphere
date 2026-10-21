@@ -54,6 +54,8 @@ namespace ams::secmon::smc {
         ExosphereForceEnableUsb30      = 65010,
         ExosphereSupportedHosVersion   = 65011,
         ExosphereApproximateApiVersion = 65012,
+        ExosphereDisabledEmbeddedPatches = 65013,
+        ExosphereNintendoDnsBlocking     = 65014,
     };
 
     SmcResult SmcGetConfigUser(SmcArguments &args);

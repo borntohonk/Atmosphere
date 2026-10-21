@@ -1,0 +1,228 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+
+permissions:
+  contents: read
+
+env:
+  HBL_VERSION: 2.4.5
+  HBMENU_VERSION: 3.6.1
+
+jobs:
+  validate:
+    name: Validate Release Command
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      release_tag: ${{ steps.extract_version.outputs.TAG }}
+      version: ${{ steps.extract_version.outputs.VERSION }}
+      rev: ${{ steps.extract_version.outputs.REV }}
+      sha: ${{ steps.extract_version.outputs.SHA }}
+      release_name: ${{ steps.extract_version.outputs.RELEASE_NAME }}
+      tag_exists: ${{ steps.check_tag.outputs.EXISTS }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: recursive
+
+      - name: Extract & verify version
+        id: extract_version
+        run: |
+          VER_FILE=libraries/libvapours/include/vapours/ams/ams_api_version.h
+
+          read_define() {
+            awk -v name="$1" '$1 == "#define" && $2 == name {print $3}' "$VER_FILE" | tr -d '[:space:]'
+          }
+
+          MAJOR=$(read_define ATMOSPHERE_RELEASE_VERSION_MAJOR)
+          MINOR=$(read_define ATMOSPHERE_RELEASE_VERSION_MINOR)
+          MICRO=$(read_define ATMOSPHERE_RELEASE_VERSION_MICRO)
+          HOS_MAJOR=$(read_define ATMOSPHERE_SUPPORTED_HOS_VERSION_MAJOR)
+          HOS_MINOR=$(read_define ATMOSPHERE_SUPPORTED_HOS_VERSION_MINOR)
+          HOS_MICRO=$(read_define ATMOSPHERE_SUPPORTED_HOS_VERSION_MICRO)
+
+          echo "DEBUG MAJOR: >${MAJOR}<"
+          echo "DEBUG MINOR: >${MINOR}<"
+          echo "DEBUG MICRO: >${MICRO}<"
+          echo "DEBUG HOS: >${HOS_MAJOR}.${HOS_MINOR}.${HOS_MICRO}<"
+
+          if [[ -z "${MAJOR}" || -z "${MINOR}" || -z "${MICRO}" || -z "${HOS_MAJOR}" || -z "${HOS_MINOR}" || -z "${HOS_MICRO}" ]]; then
+            echo "::error::❌ Can't read version from ${VER_FILE}, please check the file format!"
+            exit 1
+          fi
+
+          VERSION="${MAJOR}.${MINOR}.${MICRO}"
+          HOS_VERSION="${HOS_MAJOR}.${HOS_MINOR}.${HOS_MICRO}"
+          TAG="${VERSION}+"
+          REV=$(git rev-parse --short=9 HEAD)
+          SHA=$(git rev-parse HEAD)
+          RELEASE_NAME="Atmosphère+ ${VERSION} - supports HOS version: ${HOS_VERSION}"
+
+          if [[ -z "${REV}" ]]; then
+            echo "::error::❌ Can't fetch Git commit hash!"
+            exit 1
+          fi
+
+          echo "VERSION=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "TAG=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "REV=${REV}" >> "${GITHUB_OUTPUT}"
+          echo "SHA=${SHA}" >> "${GITHUB_OUTPUT}"
+          echo "RELEASE_NAME=${RELEASE_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "✅ Version: ${VERSION}, Tag: ${TAG}, Rev: ${REV}"
+
+      - name: Check git tag exists
+        id: check_tag
+        run: |
+          TAG="${{ steps.extract_version.outputs.TAG }}"
+          if git rev-parse "tags/$TAG" >/dev/null 2>&1; then
+            echo "::warning::Tag $TAG already exists, the release will be skipped. Update the version number to publish a new release."
+            echo "EXISTS=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "EXISTS=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+  build:
+    name: Build Atmosphère (Switch)
+    runs-on: ubuntu-latest
+    container: devkitpro/devkita64:latest
+    timeout-minutes: 120
+    needs: validate
+    permissions:
+      contents: write
+    env:
+      VER: ${{ needs.validate.outputs.version }}
+      REV: ${{ needs.validate.outputs.rev }}
+      DEVKITPRO: /opt/devkitpro
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory "*"
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y zip unzip
+
+      - name: Set archive name
+        run: |
+          ZIP_NAME="atmosphere-${VER}-master-${REV}+hbl-${HBL_VERSION}+hbmenu-${HBMENU_VERSION}"
+          echo "ZIP_NAME=${ZIP_NAME}" >> "${GITHUB_ENV}"
+          echo "ZIP_PATH=build/${ZIP_NAME}.zip" >> "${GITHUB_ENV}"
+
+      - name: Checkout libnx
+        uses: actions/checkout@v7
+        with:
+          repository: switchbrew/libnx
+          path: build/libnx
+
+      - name: Checkout hbmenu
+        uses: actions/checkout@v7
+        with:
+          repository: switchbrew/nx-hbmenu
+          path: build/hbmenu
+          ref: v${{ env.HBMENU_VERSION }}
+          submodules: recursive
+
+      - name: Checkout hbl
+        uses: actions/checkout@v7
+        with:
+          repository: switchbrew/nx-hbloader
+          path: build/hbl
+          ref: v${{ env.HBL_VERSION }}
+          submodules: recursive
+
+      - name: Checkout Atmosphère
+        uses: actions/checkout@v7
+        with:
+          path: build/Atmosphere
+          ref: ${{ needs.validate.outputs.sha }}
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: recursive
+
+      - name: Build libnx
+        working-directory: build/libnx
+        run: |
+          make -j$(nproc)
+          make install -j$(nproc)
+
+      - name: Build hbmenu
+        working-directory: build/hbmenu
+        run: make nx -j$(nproc)
+
+      - name: Build hbl
+        working-directory: build/hbl
+        run: make -j$(nproc)
+
+      - name: Build Atmosphère
+        working-directory: build/Atmosphere
+        run: |
+          make -C troposphere/daybreak
+          make -C troposphere/haze
+          make -C troposphere/reboot_to_payload
+          make -f atmosphere.mk dist-no-debug -j$(nproc)
+
+      - name: Package release
+        run: |
+          set -e
+          RELEASE_DIR=build/Atmosphere/out/nintendo_nx_arm64_armv8a/release
+          mkdir -p build/temp
+          cp "${RELEASE_DIR}/fusee.bin" build/temp/fusee.bin
+          AMS_ZIP=$(find "${RELEASE_DIR}" -maxdepth 1 -name 'atmosphere-*.zip' ! -name '*debug*' | head -n 1)
+          if [[ -z "${AMS_ZIP}" ]]; then
+            echo "::error::❌ Can't find non-debug atmosphere zip in ${RELEASE_DIR}!"
+            exit 1
+          fi
+          unzip -o "${AMS_ZIP}" -d build/temp
+          cp build/hbmenu/hbmenu.nro build/temp/hbmenu.nro
+          cp build/hbl/hbl.nsp build/temp/atmosphere/hbl.nsp
+          ls -lhR build/temp
+          (cd build/temp && zip -r "../${ZIP_NAME}.zip" ./*)
+          ls -lh "${ZIP_PATH}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ZIP_NAME }}
+          path: build/temp
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload fusee.bin artifact
+        uses: actions/upload-artifact@v7
+        with:
+          path: build/temp/fusee.bin
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload release
+        uses: softprops/action-gh-release@v3
+        if: needs.validate.outputs.tag_exists != 'true'
+        with:
+          tag_name: ${{ needs.validate.outputs.release_tag }}
+          name: ${{ needs.validate.outputs.release_name }}
+          target_commitish: ${{ needs.validate.outputs.sha }}
+          body: |
+            embeds patches into loader (for exefs_patches) through a sys-patch like pattern mechanic.
+            modifies loader for "loader_kip_patch"
+            embeds sys-patch-like mechanic into mesosphere for "fs_kip_patch" (both fusee and hekate boot supported)
+
+            ("why does this exist? > why not)
+            ("why not just use sys-patch?" -> sys-patch uses svcdebug to edit memory of already running applications, embedding patches into loader and mesosphere before the processes can be more reliable)
+
+            see: ${{ github.server_url }}/${{ github.repository }}/commit/${{ needs.validate.outputs.sha }} for more information
+          make_latest: true
+          files: |
+            ${{ env.ZIP_PATH }}
+            build/temp/fusee.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

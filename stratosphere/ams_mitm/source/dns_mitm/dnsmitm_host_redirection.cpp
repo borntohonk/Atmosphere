@@ -64,6 +64,9 @@ namespace ams::mitm::socket::resolver {
             return 1;
         }
 
+        constexpr const char HardcodedRedirections[] =
+            "127.0.0.1 *nintendo*\n";
+
         constexpr const char DefaultHostsFile[] =
             "# Nintendo telemetry servers\n"
             "127.0.0.1 receive-%.dg.srv.nintendo.net receive-%.er.srv.nintendo.net\n";
@@ -299,11 +302,18 @@ namespace ams::mitm::socket::resolver {
             return false;
         }
 
+        bool ShouldAddFullNintendoServerBlockingResolverRedirections() {
+            /* NOTE: This is configured via exosphere.ini, and is not overridable via system_settings.ini. */
+            return spl::IsNintendoDnsBlockingEnabled();
+        }
     }
 
     void InitializeResolverRedirections() {
         /* Get whether we should add defaults. */
         const bool add_defaults = ShouldAddDefaultResolverRedirections();
+
+        /* Get whether we should add full Nintendo servers blocking list in resolver redirection list. */
+        const bool add_full_nintendo_servers_block = ShouldAddFullNintendoServerBlockingResolverRedirections();
 
         /* Acquire exclusive access to the map. */
         std::scoped_lock lk(g_redirection_lock);
@@ -332,6 +342,14 @@ namespace ams::mitm::socket::resolver {
             R_ABORT_UNLESS(mitm::fs::OpenAtmosphereSdFile(std::addressof(default_file), "/hosts/default.txt", ams::fs::OpenMode_ReadWrite));
             R_ABORT_UNLESS(::fsFileWrite(std::addressof(default_file), 0, DefaultHostsFile, sizeof(DefaultHostsFile) - 1, ::FsWriteOption_Flush));
             ::fsFileClose(std::addressof(default_file));
+        }
+
+        /* NEW: Always apply hardcoded redirections first (lowest priority,
+        will be overridden by anything added after due to emplace_front in AddRedirection),
+        this will force all of *nintendo* to be redirected to 127.0.0 without potential missing dns.mitm config files. */
+        if (add_full_nintendo_servers_block) {
+            Log(log_file, "Adding hardcoded redirections.\n");
+            ParseHostsFile(HardcodedRedirections);
         }
 
         /* If we should, add the defaults. */

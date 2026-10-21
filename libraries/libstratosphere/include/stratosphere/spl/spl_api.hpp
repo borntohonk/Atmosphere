@@ -89,6 +89,22 @@ namespace ams::spl {
         return ::ams::spl::GetConfigBool(::ams::spl::ConfigItem::ExosphereForceEnableUsb30);
     }
 
+    inline bool IsNintendoDnsBlockingEnabled() {
+        u64 v;
+        if (R_FAILED(::ams::spl::GetConfig(std::addressof(v), ::ams::spl::ConfigItem::ExosphereNintendoDnsBlocking))) {
+            return true;
+        }
+        return v != 0;
+    }
+
+    inline u32 GetDisabledEmbeddedPatchesMask() {
+        u64 v;
+        if (R_FAILED(::ams::spl::GetConfig(std::addressof(v), ::ams::spl::ConfigItem::ExosphereDisabledEmbeddedPatches))) {
+            return 0;
+        }
+        return static_cast<u32>(v);
+    }
+
     inline std::pair<u8, u32> GetLogConfiguration() {
         u64 v;
         R_ABORT_UNLESS(::ams::spl::GetConfig(std::addressof(v), ::ams::spl::ConfigItem::ExosphereLogConfiguration));

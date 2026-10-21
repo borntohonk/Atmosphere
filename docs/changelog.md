@@ -858,7 +858,7 @@
 + General system stability improvements to enhance the user's experience.
 
 ## 0.12.0
-+ Configuration for exosphere was moved to sd:/exosphere.ini.
++ Configuration for exosphere was moved to sd:/exosphere.ini, also keep it under sd:/atmosphere/config/.
   + This is to facilitate BIS protection changes described below.
   + Hopefully having this outside of the Atmosphere folder will prevent accidental deletion, since this now contains important settings.
 + Atmosphere's bis protection policy for the PRODINFO partition was substantially reworked.

@@ -555,18 +555,18 @@ namespace ams::nxboot {
                                 }
                             } else if (std::strcmp(entry.key, "blank_prodinfo_sysmmc") == 0) {
                                 if (!emummc_enabled) {
-                                    if (entry.value[0] == '1') {
-                                        storage_ctx.flags[0] |= secmon::SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary;
+                                    if (entry.value[0] == '0') {
+                                        storage_ctx.flags[0] |= secmon::SecureMonitorConfigurationFlag_DisableBlankCalibrationBinary;
                                     } else {
-                                        storage_ctx.flags[0] &= ~secmon::SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary;
+                                        storage_ctx.flags[0] &= ~secmon::SecureMonitorConfigurationFlag_DisableBlankCalibrationBinary;
                                     }
                                 }
                             } else if (std::strcmp(entry.key, "blank_prodinfo_emummc") == 0) {
                                 if (emummc_enabled) {
-                                    if (entry.value[0] == '1') {
-                                        storage_ctx.flags[0] |= secmon::SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary;
+                                    if (entry.value[0] == '0') {
+                                        storage_ctx.flags[0] |= secmon::SecureMonitorConfigurationFlag_DisableBlankCalibrationBinary;
                                     } else {
-                                        storage_ctx.flags[0] &= ~secmon::SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary;
+                                        storage_ctx.flags[0] &= ~secmon::SecureMonitorConfigurationFlag_DisableBlankCalibrationBinary;
                                     }
                                 }
                             } else if (std::strcmp(entry.key, "allow_writing_to_cal_sysmmc") == 0) {
@@ -595,18 +595,52 @@ namespace ams::nxboot {
             /* Parse usb setting from system_settings.ini */
             {
                 IniSectionList sections;
-                if (ParseIniSafe(sections, "sdmc:/atmosphere/config/system_settings.ini")) {
+                if (ParseIniSafe(sections, "sdmc:/atmosphere/config/exosphere.ini") || ParseIniSafe(sections, "sdmc:/exosphere.ini")) {
                     for (const auto &section : sections) {
-                        /* We only care about the [usb] section. */
-                        if (std::strcmp(section.name, "usb")) {
-                            continue;
-                        }
+                        /* We only care about the [usb], [loader] and [atmosphere] sections. */
+                        if (std::strcmp(section.name, "usb") == 0) {
+                            /* Handle individual fields. */
+                            for (const auto &entry : section.kv_list) {
+                                if (std::strcmp(entry.key, "usb30_force_enabled") == 0) {
+                                    if (std::strcmp(entry.value, "u8!0x1") == 0) {
+                                        storage_ctx.flags[0] |= secmon::SecureMonitorConfigurationFlag_ForceEnableUsb30;
+                                    }
+                                }
+                            }
+                        } else if (std::strcmp(section.name, "atmosphere") == 0 || std::strcmp(section.name, "loader") == 0) {
+                            /* These are enabled by default, and are only disabled when explicitly set to 0. */
+                            /* Each has separate sysmmc and emummc keys; only the one matching the current boot is honored. */
+                            constexpr const struct {
+                                const char *section;
+                                const char *key;
+                                bool for_emummc;
+                                u32 flag;
+                            } DisableSettings[] = {
+                                { "atmosphere", "add_nintendo_blocking_to_dns_hosts_sysmmc", false, secmon::SecureMonitorConfigurationFlag_DisableNintendoDnsBlocking  },
+                                { "atmosphere", "add_nintendo_blocking_to_dns_hosts_emummc", true,  secmon::SecureMonitorConfigurationFlag_DisableNintendoDnsBlocking  },
+                                { "loader",     "enable_es_patches_sysmmc",                  false, secmon::SecureMonitorConfigurationFlag_DisableEsEmbeddedPatches    },
+                                { "loader",     "enable_es_patches_emummc",                  true,  secmon::SecureMonitorConfigurationFlag_DisableEsEmbeddedPatches    },
+                                { "loader",     "enable_nifm_patches_sysmmc",                false, secmon::SecureMonitorConfigurationFlag_DisableNifmEmbeddedPatches  },
+                                { "loader",     "enable_nifm_patches_emummc",                true,  secmon::SecureMonitorConfigurationFlag_DisableNifmEmbeddedPatches  },
+                                { "loader",     "enable_nim_patches_sysmmc",                 false, secmon::SecureMonitorConfigurationFlag_DisableNimEmbeddedPatches   },
+                                { "loader",     "enable_nim_patches_emummc",                 true,  secmon::SecureMonitorConfigurationFlag_DisableNimEmbeddedPatches   },
+                            };
 
-                        /* Handle individual fields. */
-                        for (const auto &entry : section.kv_list) {
-                            if (std::strcmp(entry.key, "usb30_force_enabled") == 0) {
-                                if (std::strcmp(entry.value, "u8!0x1") == 0) {
-                                    storage_ctx.flags[0] |= secmon::SecureMonitorConfigurationFlag_ForceEnableUsb30;
+                            /* Handle individual fields. */
+                            for (const auto &entry : section.kv_list) {
+                                for (const auto &setting : DisableSettings) {
+                                    if (setting.for_emummc != emummc_enabled) {
+                                        continue;
+                                    }
+                                    if (std::strcmp(section.name, setting.section) != 0 || std::strcmp(entry.key, setting.key) != 0) {
+                                        continue;
+                                    }
+
+                                    if (std::strcmp(entry.value, "u8!0x0") == 0) {
+                                        storage_ctx.flags[0] |= setting.flag;
+                                    } else {
+                                        storage_ctx.flags[0] &= ~setting.flag;
+                                    }
                                 }
                             }
                         }
