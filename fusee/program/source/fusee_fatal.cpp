@@ -28,6 +28,12 @@ namespace ams::nxboot {
             /* Create and open the file. */
             fs::FileHandle file;
             {
+                /* Ensure that the report directory exists. */
+                /* NOTE: fusee's simple filesystem does not automatically create intermediate directories. */
+                /* /atmosphere is guaranteed to exist (we booted Atmosphère from it), so we only need */
+                /* to make sure the report directory itself is there before saving. */
+                static_cast<void>(fs::CreateDirectory("sdmc:/atmosphere/fatal_errors"));
+
                 /* Generate the file path. */
                 char path[0x40];
                 util::TSNPrintf(path, sizeof(path), "sdmc:/atmosphere/fatal_errors/report_%016" PRIx64 ".bin", ctx->report_identifier);

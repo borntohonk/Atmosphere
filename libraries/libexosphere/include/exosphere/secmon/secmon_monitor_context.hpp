@@ -27,10 +27,17 @@ namespace ams::secmon {
         SecureMonitorConfigurationFlag_IsDevelopmentFunctionEnabledForUser    = (1u << 2),
         SecureMonitorConfigurationFlag_DisableUserModeExceptionHandlers       = (1u << 3),
         SecureMonitorConfigurationFlag_EnableUserModePerformanceCounterAccess = (1u << 4),
-        SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary        = (1u << 5),
+        SecureMonitorConfigurationFlag_DisableBlankCalibrationBinary          = (1u << 5),
         SecureMonitorConfigurationFlag_AllowWritingToCalibrationBinarySysmmc  = (1u << 6),
         SecureMonitorConfigurationFlag_ForceEnableUsb30                       = (1u << 7),
         SecureMonitorConfigurationFlag_BootConfigMemoryModeEnabled            = (1u << 8),
+        SecureMonitorConfigurationFlag_DisableEsEmbeddedPatches               = (1u << 9),
+        SecureMonitorConfigurationFlag_DisableNifmEmbeddedPatches             = (1u << 10),
+        SecureMonitorConfigurationFlag_DisableNimEmbeddedPatches              = (1u << 11),
+        SecureMonitorConfigurationFlag_DisableNintendoDnsBlocking             = (1u << 12),
+
+        SecureMonitorConfigurationFlag_DisableEmbeddedPatchesShift            = 9,
+        SecureMonitorConfigurationFlag_DisableEmbeddedPatchesMask             = (0x7u << SecureMonitorConfigurationFlag_DisableEmbeddedPatchesShift),
 
         SecureMonitorConfigurationFlag_Default = SecureMonitorConfigurationFlag_IsDevelopmentFunctionEnabledForKernel,
     };
@@ -101,10 +108,12 @@ namespace ams::secmon {
         constexpr bool IsDevelopmentFunctionEnabledForUser()    const { return (this->flags[0] & SecureMonitorConfigurationFlag_IsDevelopmentFunctionEnabledForUser)    != 0; }
         constexpr bool DisableUserModeExceptionHandlers()       const { return (this->flags[0] & SecureMonitorConfigurationFlag_DisableUserModeExceptionHandlers)       != 0; }
         constexpr bool EnableUserModePerformanceCounterAccess() const { return (this->flags[0] & SecureMonitorConfigurationFlag_EnableUserModePerformanceCounterAccess) != 0; }
-        constexpr bool ShouldUseBlankCalibrationBinary()        const { return (this->flags[0] & SecureMonitorConfigurationFlag_ShouldUseBlankCalibrationBinary)        != 0; }
+        constexpr bool ShouldUseBlankCalibrationBinary()        const { return (this->flags[0] & SecureMonitorConfigurationFlag_DisableBlankCalibrationBinary)          == 0; }
         constexpr bool AllowWritingToCalibrationBinarySysmmc()  const { return (this->flags[0] & SecureMonitorConfigurationFlag_AllowWritingToCalibrationBinarySysmmc)  != 0; }
         constexpr bool IsUsb30ForceEnabled()                    const { return (this->flags[0] & SecureMonitorConfigurationFlag_ForceEnableUsb30)                       != 0; }
         constexpr bool IsBootConfigMemoryModeEnabled()          const { return (this->flags[0] & SecureMonitorConfigurationFlag_BootConfigMemoryModeEnabled)            != 0; }
+        constexpr bool IsNintendoDnsBlockingEnabled()           const { return (this->flags[0] & SecureMonitorConfigurationFlag_DisableNintendoDnsBlocking)             == 0; }
+        constexpr u32  GetDisabledEmbeddedPatchesMask()         const { return (this->flags[0] & SecureMonitorConfigurationFlag_DisableEmbeddedPatchesMask) >> SecureMonitorConfigurationFlag_DisableEmbeddedPatchesShift; }
 
         constexpr bool IsDevelopmentFunctionEnabled(bool for_kern) const { return for_kern ? this->IsDevelopmentFunctionEnabledForKernel() : this->IsDevelopmentFunctionEnabledForUser(); }
     };

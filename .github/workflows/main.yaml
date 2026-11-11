@@ -1,0 +1,313 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Release Command
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      release_tag: ${{ steps.extract_version.outputs.TAG }}
+      version: ${{ steps.extract_version.outputs.VERSION }}
+      rev: ${{ steps.extract_version.outputs.REV }}
+      sha: ${{ steps.extract_version.outputs.SHA }}
+      release_name: ${{ steps.extract_version.outputs.RELEASE_NAME }}
+      tag_exists: ${{ steps.check_tag.outputs.EXISTS }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: master
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: recursive
+
+      - name: Extract & verify version
+        id: extract_version
+        run: |
+          VER_FILE=libraries/libvapours/include/vapours/ams/ams_api_version.h
+
+          read_define() {
+            awk -v name="$1" '$1 == "#define" && $2 == name {print $3}' "$VER_FILE" | tr -d '[:space:]'
+          }
+
+          MAJOR=$(read_define ATMOSPHERE_RELEASE_VERSION_MAJOR)
+          MINOR=$(read_define ATMOSPHERE_RELEASE_VERSION_MINOR)
+          MICRO=$(read_define ATMOSPHERE_RELEASE_VERSION_MICRO)
+          HOS_MAJOR=$(read_define ATMOSPHERE_SUPPORTED_HOS_VERSION_MAJOR)
+          HOS_MINOR=$(read_define ATMOSPHERE_SUPPORTED_HOS_VERSION_MINOR)
+          HOS_MICRO=$(read_define ATMOSPHERE_SUPPORTED_HOS_VERSION_MICRO)
+
+          echo "DEBUG MAJOR: >${MAJOR}<"
+          echo "DEBUG MINOR: >${MINOR}<"
+          echo "DEBUG MICRO: >${MICRO}<"
+          echo "DEBUG HOS: >${HOS_MAJOR}.${HOS_MINOR}.${HOS_MICRO}<"
+
+          if [[ -z "${MAJOR}" || -z "${MINOR}" || -z "${MICRO}" || -z "${HOS_MAJOR}" || -z "${HOS_MINOR}" || -z "${HOS_MICRO}" ]]; then
+            echo "::error::❌ Can't read version from ${VER_FILE}, please check the file format!"
+            exit 1
+          fi
+
+          VERSION="${MAJOR}.${MINOR}.${MICRO}"
+          HOS_VERSION="${HOS_MAJOR}.${HOS_MINOR}.${HOS_MICRO}"
+          TAG="${VERSION}+"
+          REV=$(git rev-parse --short=9 HEAD)
+          SHA=$(git rev-parse HEAD)
+          RELEASE_NAME="Atmosphère+ ${VERSION} - supports HOS version: ${HOS_VERSION}"
+
+          if [[ -z "${REV}" ]]; then
+            echo "::error::❌ Can't fetch Git commit hash!"
+            exit 1
+          fi
+
+          echo "VERSION=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "TAG=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "REV=${REV}" >> "${GITHUB_OUTPUT}"
+          echo "SHA=${SHA}" >> "${GITHUB_OUTPUT}"
+          echo "RELEASE_NAME=${RELEASE_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "✅ Version: ${VERSION}, Tag: ${TAG}, Rev: ${REV}"
+
+      - name: Check git tag exists
+        id: check_tag
+        run: |
+          TAG="${{ steps.extract_version.outputs.TAG }}"
+          if git rev-parse "tags/$TAG" >/dev/null 2>&1; then
+            echo "::warning::Tag $TAG already exists, the release will be skipped. Update the version number to publish a new release."
+            echo "EXISTS=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "EXISTS=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+  build:
+    name: Build Atmosphère (Switch)
+    runs-on: ubuntu-latest
+    container: devkitpro/devkita64:latest
+    timeout-minutes: 120
+    needs: validate
+    permissions:
+      contents: write
+    env:
+      VER: ${{ needs.validate.outputs.version }}
+      REV: ${{ needs.validate.outputs.rev }}
+      DEVKITPRO: /opt/devkitpro
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory "*"
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y zip unzip texinfo
+
+      - name: Resolve latest hbl, hbmenu and sphaira versions
+        run: |
+          set -eo pipefail
+          latest_tag() {
+            git ls-remote --tags --refs "https://github.com/$1.git" \
+              | awk -F/ '{print $3}' \
+              | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sort -V | tail -n 1
+          }
+          HBL_TAG=$(latest_tag switchbrew/nx-hbloader)
+          HBMENU_TAG=$(latest_tag switchbrew/nx-hbmenu)
+          SPHAIRA_TAG=$(latest_tag NaGaa95/sphaira)
+          for v in HBL_TAG HBMENU_TAG SPHAIRA_TAG; do
+            if [[ -z "${!v}" ]]; then
+              echo "::error::❌ Can't resolve ${v}!"
+              exit 1
+            fi
+          done
+          {
+            echo "HBL_TAG=${HBL_TAG}"
+            echo "HBL_VERSION=${HBL_TAG#v}"
+            echo "HBMENU_TAG=${HBMENU_TAG}"
+            echo "HBMENU_VERSION=${HBMENU_TAG#v}"
+            echo "SPHAIRA_TAG=${SPHAIRA_TAG}"
+            echo "SPHAIRA_VERSION=${SPHAIRA_TAG#v}"
+          } >> "${GITHUB_ENV}"
+          echo "✅ hbl: ${HBL_TAG}, hbmenu: ${HBMENU_TAG}, sphaira: ${SPHAIRA_TAG}"
+
+      - name: Set archive names
+        run: |
+          BASE_NAME="atmosphere-${VER}-master-${REV}+hbl-${HBL_VERSION}"
+          {
+            echo "HBMENU_ZIP_NAME=${BASE_NAME}+hbmenu-${HBMENU_VERSION}"
+            echo "SPHAIRA_ZIP_NAME=${BASE_NAME}+sphaira-${SPHAIRA_VERSION}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Checkout libnx
+        uses: actions/checkout@v7
+        with:
+          repository: switchbrew/libnx
+          path: build/libnx
+
+      - name: Checkout hbmenu
+        uses: actions/checkout@v7
+        with:
+          repository: switchbrew/nx-hbmenu
+          path: build/hbmenu
+          ref: ${{ env.HBMENU_TAG }}
+          submodules: recursive
+
+      - name: Checkout hbl
+        uses: actions/checkout@v7
+        with:
+          repository: switchbrew/nx-hbloader
+          path: build/hbl
+          ref: ${{ env.HBL_TAG }}
+          submodules: recursive
+
+      - name: Checkout sphaira
+        uses: actions/checkout@v7
+        with:
+          repository: NaGaa95/sphaira
+          path: build/sphaira
+          ref: ${{ env.SPHAIRA_TAG }}
+          submodules: recursive
+
+      - name: Checkout newlib (iosupport branch, required by sphaira)
+        uses: actions/checkout@v7
+        with:
+          repository: R-YaTian/newlib
+          path: build/newlib
+          ref: iosupport
+
+      - name: Checkout Atmosphère
+        uses: actions/checkout@v7
+        with:
+          path: build/Atmosphere
+          ref: ${{ needs.validate.outputs.sha }}
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: recursive
+
+      - name: Build libnx
+        working-directory: build/libnx
+        run: |
+          make -j$(nproc)
+          make install -j$(nproc)
+
+      - name: Build hbmenu
+        working-directory: build/hbmenu
+        run: make nx -j$(nproc)
+
+      - name: Build hbl
+        working-directory: build/hbl
+        run: make -j$(nproc)
+
+      - name: Build Atmosphère
+        working-directory: build/Atmosphere
+        run: |
+          make -C troposphere/daybreak
+          make -C troposphere/haze
+          make -C troposphere/reboot_to_payload
+          make -f atmosphere.mk dist-no-debug -j$(nproc)
+
+      - name: Get CMake
+        uses: lukka/get-cmake@v4.4.2
+
+      - name: Build libgloss (sphaira)
+        working-directory: build/newlib
+        run: |
+          chmod 777 -R .
+          ./build-libgloss-local.sh
+
+      - name: Build sphaira
+        working-directory: build/sphaira
+        run: |
+          cmake --preset Release
+          cmake --build --preset Release --parallel $(nproc)
+
+      - name: Package release
+        run: |
+          set -e
+          RELEASE_DIR=build/Atmosphere/out/nintendo_nx_arm64_armv8a/release
+          cp "${RELEASE_DIR}/fusee.bin" build/fusee.bin
+          AMS_ZIP=$(find "${RELEASE_DIR}" -maxdepth 1 -name 'atmosphere-*.zip' ! -name '*debug*' | head -n 1)
+          if [[ -z "${AMS_ZIP}" ]]; then
+            echo "::error::❌ Can't find non-debug atmosphere zip in ${RELEASE_DIR}!"
+            exit 1
+          fi
+
+          # Shared base: Atmosphère + fusee.bin + hbl
+          mkdir -p build/temp-base
+          unzip -o "${AMS_ZIP}" -d build/temp-base
+          cp build/fusee.bin build/temp-base/fusee.bin
+          cp build/hbl/hbl.nsp build/temp-base/atmosphere/hbl.nsp
+
+          # hbmenu-only: hbmenu at /hbmenu.nro
+          cp -a build/temp-base build/temp-hbmenu
+          cp build/hbmenu/hbmenu.nro build/temp-hbmenu/hbmenu.nro
+
+          # sphaira: sphaira at /hbmenu.nro, hbmenu at /switch/hbmenu.nro
+          cp -a build/temp-base build/temp-sphaira
+          mkdir -p build/temp-sphaira/switch
+          cp build/hbmenu/hbmenu.nro build/temp-sphaira/switch/hbmenu.nro
+          cp build/sphaira/build/Release/sphaira.nro build/temp-sphaira/hbmenu.nro
+
+          (cd build/temp-hbmenu && zip -r "../${HBMENU_ZIP_NAME}.zip" ./*)
+          (cd build/temp-sphaira && zip -r "../${SPHAIRA_ZIP_NAME}.zip" ./*)
+          ls -lhR build/temp-hbmenu build/temp-sphaira
+          ls -lh "build/${HBMENU_ZIP_NAME}.zip" "build/${SPHAIRA_ZIP_NAME}.zip"
+
+      - name: Upload hbmenu artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.HBMENU_ZIP_NAME }}
+          path: build/temp-hbmenu
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload sphaira artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.SPHAIRA_ZIP_NAME }}
+          path: build/temp-sphaira
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload fusee.bin artifact
+        uses: actions/upload-artifact@v7
+        with:
+          path: build/fusee.bin
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload release
+        uses: softprops/action-gh-release@v3
+        if: needs.validate.outputs.tag_exists != 'true'
+        with:
+          tag_name: ${{ needs.validate.outputs.release_tag }}
+          name: ${{ needs.validate.outputs.release_name }}
+          target_commitish: ${{ needs.validate.outputs.sha }}
+          body: |
+            This fork comes in two variations;
+            variation 1: regular hbmenu as hbmenu.nro (sphaira not included)
+            variation 2: sphaira as hbmenu.nro (hbmenu inside of /switch/hbmenu.nro)
+
+            Sphaira has reached a point where it is suitable to replace hbmenu, and with the patches integrated, it is a better fit for this fork.
+
+            embeds patches into loader (for exefs_patches) through a sys-patch like pattern mechanic.
+            modifies loader for "loader_kip_patch"
+            embeds sys-patch-like mechanic into mesosphere for "fs_kip_patch" (both fusee and hekate boot supported)
+
+            ("why does this exist? > why not)
+            ("why not just use sys-patch?" -> sys-patch uses svcdebug to edit memory of already running applications, embedding patches into loader and mesosphere before the processes can be more reliable)
+
+            see: ${{ github.server_url }}/${{ github.repository }}/commit/${{ needs.validate.outputs.sha }} for more information
+          make_latest: true
+          files: |
+            build/${{ env.HBMENU_ZIP_NAME }}.zip
+            build/${{ env.SPHAIRA_ZIP_NAME }}.zip
+            build/fusee.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -36,7 +36,7 @@ Please refer to the project's repository [here](https://github.com/m4xw/emuMMC) 
 
 ## exosphere.ini
 This is the configuration file used by exosphère.
-This file is located in the root of your SD card and a default template can be found inside the `/atmosphere/config_templates/` folder.
+This file is located in the root of your SD card or `/atmosphere/config/` folder and a default template can be found inside the `/atmosphere/config_templates/` folder.
 
 ### Configuring Debugging Modes
 By default, Atmosphère signals to the Horizon kernel that debugging is enabled while leaving usermode debugging disabled, but this can cause undesirable side-effects. If you wish to change this behavior, go to the `exosphere` section and change the value of `X` according to the following list.

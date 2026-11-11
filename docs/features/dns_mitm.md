@@ -43,6 +43,23 @@ The current default redirections are:
 127.0.0.1 receive-%.dg.srv.nintendo.net receive-%.er.srv.nintendo.net
 ```
 
+### Atmosphère full Nintendo servers blocking
+
+In additional, atmosphère's full Nintendo servers blocking redirections are parsed **in addition to** the contents of the loaded hosts file.
+
+This is equivalent to thinking of the loaded hosts file as having the atmosphère full Nintendo servers blocking rules prepended to it.
+
+This setting is considered desirable, because it blocks all the Nintendo servers, so users will never be banned from accessing Nintendo servers.
+
+This behavior can be opted-out from by setting `add_nintendo_blocking_to_dns_hosts_sysmmc=u8!0x0` and/or `add_nintendo_blocking_to_dns_hosts_emummc=u8!0x0` in the `[atmosphere]` section of `exosphere.ini`.
+
+The current full Nintendo servers blocking redirections are:
+
+```
+# All Nintendo servers
+127.0.0.1 *nintendo*
+```
+
 ## Debugging
 
 On startup (or on hosts file re-parse), DNS.mitm will log both what hosts file it selected and the contents of all redirections it parses to `/atmosphere/logs/dns_mitm_startup.log`.

@@ -307,6 +307,12 @@ namespace ams::settings::fwdbg {
         }
 
         void LoadDefaultCustomSettings() {
+            /* Disable OLSC (online save cloud sync) communication.
+            * Prevents "Please wait" hang when launching games with Wi-Fi on
+            * and a linked account that has save cloud issues. */
+            R_ABORT_UNLESS(ParseSettingsItemValue("olsc", "default_auto_download_global_setting", "u8!0x0"));
+            R_ABORT_UNLESS(ParseSettingsItemValue("olsc", "default_auto_upload_global_setting",   "u8!0x0"));
+
             /* Disable uploading error reports to Nintendo. */
             R_ABORT_UNLESS(ParseSettingsItemValue("eupld", "upload_enabled", "u8!0x0"));
 
@@ -372,6 +378,12 @@ namespace ams::settings::fwdbg {
             /* whatever is specified in the user's hosts file. */
             /* 0 = Disabled (use hosts file contents), 1 = Enabled (use defaults and hosts file contents) */
             R_ABORT_UNLESS(ParseSettingsItemValue("atmosphere", "add_defaults_to_dns_hosts", "u8!0x1"));
+
+            /* Controls whether dns.mitm uses the full nintendo servers blocking redirections in addition to */
+            /* whatever is specified in the user's hosts file. */
+            /* 0 = Disabled (use hosts file contents), 1 = Enabled (use blocking redirections and hosts file contents) */
+            /* NOTE: This is configured via exosphere.ini, and only mirrored here so that it can be queried. */
+            R_ABORT_UNLESS(ParseSettingsItemValue("atmosphere", "add_nintendo_blocking_to_dns_hosts", spl::IsNintendoDnsBlockingEnabled() ? "u8!0x1" : "u8!0x0"));
 
             /* Controls whether dns.mitm logs to the sd card for debugging. */
             /* 0 = Disabled, 1 = Enabled */

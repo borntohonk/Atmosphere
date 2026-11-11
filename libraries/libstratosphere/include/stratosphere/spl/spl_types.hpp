@@ -246,6 +246,8 @@ namespace ams::spl {
         ExosphereForceEnableUsb30      = 65010,
         ExosphereSupportedHosVersion   = 65011,
         ExosphereApproximateApiVersion = 65012, /* NOTE: Internal use only. */
+        ExosphereDisabledEmbeddedPatches = 65013,
+        ExosphereNintendoDnsBlocking     = 65014,
     };
 
 }

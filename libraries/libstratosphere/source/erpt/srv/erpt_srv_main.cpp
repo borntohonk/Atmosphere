@@ -36,6 +36,7 @@ namespace ams::erpt::srv {
         constexpr                  s64 SystemSaveDataJournalSize = 2720_KB;
         constexpr                  u32 DefaultThrottleTimeWindowSeconds = 3;
 
+        /* NOTE: This setting is still accepted for compatibility, but it has no effect, as reports are never written to the SD card. */
         constinit bool g_automatic_report_cleanup_enabled = true;
 
         Result ExtendSystemSaveData() {
@@ -151,25 +152,10 @@ namespace ams::erpt::srv {
         fs::SetAllocator(Allocate, DeallocateWithSize);
         fs::SetEnabledAutoAbort(false);
 
-        R_ABORT_UNLESS(fs::MountSdCardErrorReportDirectoryForAtmosphere(ReportOnSdStoragePath));
-
-        if (g_automatic_report_cleanup_enabled) {
-            constexpr s64 MinimumReportCountForCleanup = 1000;
-            s64 report_count = MinimumReportCountForCleanup;
-
-            fs::DirectoryHandle dir;
-            if (R_SUCCEEDED(fs::OpenDirectory(std::addressof(dir), ReportOnSdStorageRootDirectoryPath, fs::OpenDirectoryMode_All))) {
-                ON_SCOPE_EXIT { fs::CloseDirectory(dir); };
-
-                if (R_FAILED(fs::GetDirectoryEntryCount(std::addressof(report_count), dir))) {
-                    report_count = MinimumReportCountForCleanup;
-                }
-            }
-
-            if (report_count >= MinimumReportCountForCleanup) {
-                static_cast<void>(fs::CleanDirectoryRecursively(ReportOnSdStorageRootDirectoryPath));
-            }
-        }
+        /* NOTE: Atmosphere's erpt does not write error reports to the SD card (see erpt_srv_report.cpp), */
+        /* and all report storage is done through the "save" mount point. Because the "ersd" mount point */
+        /* would therefore be unused, we neither create nor mount the SD card report directory here. */
+        /* This ensures that an empty /atmosphere/erpt_reports folder is never generated. */
 
         if (hos::GetVersion() >= hos::Version_22_0_0) {
             SetReportThrottleTimeSpan();
